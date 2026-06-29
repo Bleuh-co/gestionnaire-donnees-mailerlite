@@ -1,18 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth-server";
-import type { MailerLiteAccount } from "@/lib/types";
+import { getAccountsList } from "@/lib/mailerlite-client";
 
-// GET /api/accounts → liste des comptes ML (clés masquées)
+export const runtime = "nodejs";
+
+// GET /api/accounts → liste des comptes ML configurés (clés masquées)
 export async function GET() {
   await requireSession();
-  // TODO: implémenter — voir Antigravity.md
-  const accounts: MailerLiteAccount[] = [];
-  return NextResponse.json(accounts);
-}
-
-// POST /api/accounts → ajoute un compte (valide la clé via ML)
-export async function POST(_req: NextRequest) {
-  await requireSession();
-  // TODO: implémenter — voir Antigravity.md
-  return NextResponse.json({ success: true });
+  try {
+    const accounts = await getAccountsList();
+    return NextResponse.json(accounts);
+  } catch (e: any) {
+    console.error("[api/accounts] Error:", e?.message);
+    return NextResponse.json(
+      { error: "Impossible de charger les comptes" },
+      { status: 500 }
+    );
+  }
 }

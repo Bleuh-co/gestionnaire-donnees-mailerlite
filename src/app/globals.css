@@ -145,6 +145,16 @@ h4 {
     color: var(--chanv-beige);
     @apply badge;
   }
+  .badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+    @apply badge;
+  }
+  .badge-failed {
+    background: #fee2e2;
+    color: #991b1b;
+    @apply badge;
+  }
 
   .chanv-header {
     background: var(--chanv-terre);
