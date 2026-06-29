@@ -33,9 +33,32 @@ export function NavBar() {
           </p>
         </div>
 
-        {/* Nav links seront ajoutés ici quand le contenu sera défini */}
+        {/* Nav links — desktop only (mobile uses sidebar) */}
+        <nav className="hidden md:flex items-center gap-4 md:ml-auto">
+          <a
+            href="/accounts"
+            className="flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors"
+          >
+            <span className="text-base">📊</span>
+            Comptes
+          </a>
+          <a
+            href="/snapshots"
+            className="flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors"
+          >
+            <span className="text-base">📦</span>
+            Copies
+          </a>
+          <a
+            href="/explore"
+            className="flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors"
+          >
+            <span className="text-base">🔍</span>
+            Explorer
+          </a>
+        </nav>
 
-        <div className="flex items-center gap-3 md:ml-auto absolute top-0 right-0 md:relative md:top-auto md:right-auto">
+        <div className="flex items-center gap-3 absolute top-0 right-0 md:relative md:top-auto md:right-auto">
           <div className="text-right hidden sm:block">
             <div className="text-sm font-semibold text-white whitespace-nowrap">
               {session.displayName || session.email}
