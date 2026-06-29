@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth-server";
 import { adminDb } from "@/lib/firebase-admin";
+import { deleteSnapshotFromGCS } from "@/lib/gcs-storage";
 import type { Snapshot } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -30,7 +31,7 @@ export async function GET(
   }
 }
 
-// DELETE /api/snapshots/[id] → supprime un snapshot + ses abonnés
+// DELETE /api/snapshots/[id] → supprime le snapshot Firestore + fichier GCS
 export async function DELETE(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -48,20 +49,10 @@ export async function DELETE(
       );
     }
 
-    // Supprimer la sous-collection subscribers par batch
-    const subsSnap = await snapshotRef.collection("subscribers").limit(500).get();
-    while (!subsSnap.empty) {
-      const batch = db.batch();
-      for (const subDoc of subsSnap.docs) {
-        batch.delete(subDoc.ref);
-      }
-      await batch.commit();
-      // Continuer si plus de 500
-      const next = await snapshotRef.collection("subscribers").limit(500).get();
-      if (next.empty) break;
-    }
+    // Supprimer le fichier GCS
+    await deleteSnapshotFromGCS(id);
 
-    // Supprimer le document snapshot
+    // Supprimer le document Firestore
     await snapshotRef.delete();
 
     return NextResponse.json({ success: true });

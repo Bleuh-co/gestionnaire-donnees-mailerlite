@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth-server";
 import { adminDb } from "@/lib/firebase-admin";
+import { loadSubscribersFromGCS } from "@/lib/gcs-storage";
 import type { MLSubscriber, PaginatedResult, SubscriberStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -8,6 +9,7 @@ export const runtime = "nodejs";
 const COLLECTION = "ml_snapshots";
 
 // GET /api/snapshots/[id]/subscribers → abonnés du snapshot, paginés + filtres
+// Charge le fichier JSON depuis GCS, filtre en mémoire (~15 MB max)
 export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -17,7 +19,7 @@ export async function GET(
   const sp = req.nextUrl.searchParams;
   const page = Math.max(1, parseInt(sp.get("page") || "1", 10));
   const limit = Math.min(parseInt(sp.get("limit") || "50", 10), 100);
-  const search = sp.get("search") || "";
+  const search = (sp.get("search") || "").toLowerCase();
   const status = sp.get("status") as SubscriberStatus | undefined;
 
   try {
@@ -31,38 +33,26 @@ export async function GET(
       );
     }
 
-    const subsRef = snapshotRef.collection("subscribers");
-    let query: FirebaseFirestore.Query = subsRef;
+    // Charger les abonnés depuis GCS
+    let subscribers: MLSubscriber[] = await loadSubscribersFromGCS(id);
 
-    // Filtre par statut
+    // Filtres en mémoire
     if (status) {
-      query = query.where("status", "==", status);
+      subscribers = subscribers.filter((s) => s.status === status);
     }
-
-    // Recherche par préfixe email
     if (search) {
-      const lower = search.toLowerCase();
-      query = query
-        .where("email", ">=", lower)
-        .where("email", "<=", lower + "\uf8ff");
+      subscribers = subscribers.filter((s) =>
+        s.email.toLowerCase().includes(search)
+      );
     }
 
-    // Count total (approximatif via une query sans limit)
-    const countSnap = await query.count().get();
-    const total = countSnap.data().count;
+    // Tri par email
+    subscribers.sort((a, b) => a.email.localeCompare(b.email));
 
-    // Pagination par offset
+    // Pagination
+    const total = subscribers.length;
     const offset = (page - 1) * limit;
-    const dataSnap = await query
-      .orderBy("email")
-      .offset(offset)
-      .limit(limit)
-      .get();
-
-    const data: MLSubscriber[] = dataSnap.docs.map((doc) => ({
-      id: doc.id,
-      ...(doc.data() as Omit<MLSubscriber, "id">),
-    }));
+    const data = subscribers.slice(offset, offset + limit);
 
     const result: PaginatedResult<MLSubscriber> = {
       data,

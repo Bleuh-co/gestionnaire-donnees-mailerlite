@@ -68,6 +68,7 @@ export interface Snapshot {
   fetchedSubscribers: number;
   fields: MLField[];
   errorMessage?: string;
+  gcsPath?: string;       // chemin du fichier JSON dans GCS
   createdAt: string;       // ISO
   completedAt?: string;    // ISO
   createdByEmail: string;

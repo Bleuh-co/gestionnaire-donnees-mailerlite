@@ -244,16 +244,23 @@ class ConnectV2Client implements IMailerLiteClient {
   }
 
   async getAccountInfo(): Promise<AccountInfo> {
-    const res = await fetchWithRetry(`${this.baseUrl}/account`, {
-      headers: this.headers(),
-    });
-    if (!res.ok) throw new Error(`ML Connect /account: ${res.status}`);
-    const json = await res.json();
+    // Connect API: /account for name, groups sum for subscriber count
+    // (the /account endpoint does not include subscriber_count)
+    const [accountRes, groups] = await Promise.all([
+      fetchWithRetry(`${this.baseUrl}/account`, { headers: this.headers() }),
+      this.getGroups(),
+    ]);
+    if (!accountRes.ok) throw new Error(`ML Connect /account: ${accountRes.status}`);
+    const json = await accountRes.json();
     const account = json.data || json;
+
+    // Sum active subscribers across all groups
+    const subscriberCount = groups.reduce((sum, g) => sum + (g.activeCount || 0), 0);
+
     return {
       name: account.name || this.label,
       email: account.email || "",
-      subscriberCount: account.subscriber_count || 0,
+      subscriberCount,
     };
   }
 

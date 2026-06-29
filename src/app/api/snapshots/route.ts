@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth-server";
 import { adminDb } from "@/lib/firebase-admin";
 import { getClientById } from "@/lib/mailerlite-client";
-import type { Snapshot, SnapshotStatus } from "@/lib/types";
+import { saveSubscribersToGCS } from "@/lib/gcs-storage";
+import type { Snapshot, SnapshotStatus, MLSubscriber } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/snapshots → lance la création d'un snapshot (copie)
+// POST /api/snapshots → lance la création d'un snapshot (copie vers GCS)
 export async function POST(req: NextRequest) {
   const session = await requireSession();
   const body = await req.json().catch(() => ({}));
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
       label ||
       `Copie ${client.label}${groupName ? ` — ${groupName}` : ""} — ${new Date().toLocaleDateString("fr-CA")}`;
 
-    // Créer le document snapshot
+    // Créer le document snapshot (1 seul doc Firestore = metadata)
     const snapshotData: Omit<Snapshot, "id"> = {
       accountId,
       accountLabel: client.label,
@@ -139,8 +140,9 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Copie tous les abonnés du compte ML dans Firestore (sous-collection).
- * Met à jour la progression périodiquement.
+ * Copie tous les abonnés du compte ML dans un fichier JSON sur Cloud Storage.
+ * Metadata (progression) dans Firestore (1 doc).
+ * Données abonnés dans GCS (1 fichier JSON).
  */
 async function processSnapshot(
   snapshotId: string,
@@ -157,7 +159,7 @@ async function processSnapshot(
   let cursor: string | null = null;
   let fetched = 0;
   const BATCH_SIZE = 100;
-  const subsCollection = snapshotRef.collection("subscribers");
+  const allSubscribers: MLSubscriber[] = [];
 
   try {
     do {
@@ -169,27 +171,13 @@ async function processSnapshot(
 
       if (result.data.length === 0) break;
 
-      // Batch write dans Firestore (max 500 opérations par batch)
-      const batch = db.batch();
-      for (const sub of result.data) {
-        const subRef = subsCollection.doc(sub.id);
-        batch.set(subRef, {
-          email: sub.email,
-          status: sub.status,
-          source: sub.source || null,
-          fields: sub.fields,
-          groups: sub.groups,
-          subscribedAt: sub.subscribedAt || null,
-          createdAt: sub.createdAt || null,
-          updatedAt: sub.updatedAt || null,
-        });
-      }
-      await batch.commit();
+      // Accumuler en mémoire (au lieu d'écrire dans Firestore)
+      allSubscribers.push(...result.data);
 
       fetched += result.data.length;
       cursor = result.nextCursor;
 
-      // Update progression tous les 100 abonnés
+      // Update progression dans Firestore (1 seul doc)
       await snapshotRef.update({
         fetchedSubscribers: fetched,
         totalSubscribers: result.total > fetched ? result.total : fetched,
@@ -200,16 +188,20 @@ async function processSnapshot(
       );
     } while (cursor);
 
-    // Terminé
+    // Sauvegarder tout dans GCS (1 fichier JSON)
+    const gcsPath = await saveSubscribersToGCS(snapshotId, allSubscribers);
+
+    // Terminé — update metadata Firestore
     await snapshotRef.update({
       status: "completed",
       fetchedSubscribers: fetched,
       totalSubscribers: fetched,
+      gcsPath,
       completedAt: new Date().toISOString(),
     });
 
     console.log(
-      `[snapshot:${snapshotId}] ✅ Completed — ${fetched} subscribers copied`
+      `[snapshot:${snapshotId}] ✅ Completed — ${fetched} subscribers saved to GCS`
     );
   } catch (e: any) {
     console.error(`[snapshot:${snapshotId}] ❌ Failed:`, e?.message);
