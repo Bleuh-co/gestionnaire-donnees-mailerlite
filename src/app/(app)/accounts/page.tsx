@@ -60,7 +60,7 @@ export default function AccountsPage() {
 
 function AccountCard({ account }: { account: MailerLiteAccount }) {
   const brandEmoji =
-    account.id === "chanv" ? "🌿" : account.id === "bleuh-mdh" ? "🏠" : "📧";
+    account.id === "chanv" ? "🌿" : account.id === "mdh" ? "🏠" : "📧";
 
   return (
     <div

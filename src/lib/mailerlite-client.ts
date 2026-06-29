@@ -383,7 +383,7 @@ export function getConfiguredClients(): IMailerLiteClient[] {
 
   const mdhKey = process.env.MAILERLITE_API_KEY;
   if (mdhKey) {
-    clients.push(new ClassicV2Client("bleuh-mdh", "Bleuh / MDH", mdhKey));
+    clients.push(new ClassicV2Client("mdh", "Maison d'Herbes", mdhKey));
   }
 
   const chanvKey = process.env.MAILERLITE_CHANV_API_KEY;
