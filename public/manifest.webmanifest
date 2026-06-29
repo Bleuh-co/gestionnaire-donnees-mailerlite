@@ -1,0 +1,27 @@
+{
+  "name": "Gestionnaire données MailerLite — Chanv",
+  "short_name": "Gest. données MailerLite",
+  "description": "Cette app va servir à faire des copies et consultations des base de données utilisateurs MailerLite. — Groupe Chanv",
+  "start_url": "/mailerlite",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#282828",
+  "categories": ["business", "productivity"],
+  "lang": "fr-CA",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
