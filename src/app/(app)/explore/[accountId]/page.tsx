@@ -57,7 +57,7 @@ export default function ExploreAccountPage({
     );
   }
 
-  const emoji = accountId === "chanv" ? "🌿" : "🏠";
+  const emoji = accountId === "chanv" ? "🌿" : accountId === "bleuh" ? "🔵" : "🏠";
 
   return (
     <main className="py-6">

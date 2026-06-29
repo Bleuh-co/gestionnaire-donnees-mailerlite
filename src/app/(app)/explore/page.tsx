@@ -36,7 +36,7 @@ export default function ExplorePage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {accounts.map((acc) => {
-            const emoji = acc.id === "chanv" ? "🌿" : "🏠";
+            const emoji = acc.id === "chanv" ? "🌿" : acc.id === "bleuh" ? "🔵" : "🏠";
             return (
               <Link
                 key={acc.id}

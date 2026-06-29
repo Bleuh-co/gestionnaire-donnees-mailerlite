@@ -47,7 +47,7 @@ steps:
       - "--platform=managed"
       - "--allow-unauthenticated"
       - "--set-env-vars=^;^APP_PUBLIC_URL=https://gestionnaire-donnees-mailerlite-dev-802272023583.northamerica-northeast1.run.app"
-      - "--set-secrets=FIREBASE_SERVICE_ACCOUNT_JSON=FIREBASE_SERVICE_ACCOUNT_JSON:latest,MAILERLITE_API_KEY=MAILERLITE_API_KEY:latest,MAILERLITE_CHANV_API_KEY=MAILERLITE_CHANV_API_KEY:latest"
+      - "--set-secrets=FIREBASE_SERVICE_ACCOUNT_JSON=FIREBASE_SERVICE_ACCOUNT_JSON:latest,MAILERLITE_API_KEY=MAILERLITE_API_KEY:latest,MAILERLITE_CHANV_API_KEY=MAILERLITE_CHANV_API_KEY:latest,MAILERLITE_BLEUH_API_KEY=MAILERLITE_BLEUH_API_KEY:latest"
 
 images:
   - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"
