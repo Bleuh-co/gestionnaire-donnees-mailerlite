@@ -1,0 +1,58 @@
+steps:
+  # 1) Build de l'image Docker.
+  #    Les NEXT_PUBLIC_* doivent être inlinés au moment du `next build`,
+  #    pas au runtime. La config web Firebase est publique par design.
+  - name: "gcr.io/cloud-builders/docker"
+    id: Build
+    args:
+      - "build"
+      - "--build-arg"
+      - "NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyCyGRvYpQPpr27fIJQ5-w8yeR-yzVDtdRY"
+      - "--build-arg"
+      - "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=gandalf-dev-497413.firebaseapp.com"
+      - "--build-arg"
+      - "NEXT_PUBLIC_FIREBASE_PROJECT_ID=gandalf-dev-497413"
+      - "--build-arg"
+      - "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=gandalf-dev-497413.firebasestorage.app"
+      - "--build-arg"
+      - "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=802272023583"
+      - "--build-arg"
+      - "NEXT_PUBLIC_FIREBASE_APP_ID=1:802272023583:web:b75abb24714f154a28312a"
+      - "--build-arg"
+      - "NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=chanv.com,bleuh.co,lafeuilleverte.ca,maisondherbes.com"
+      - "--build-arg"
+      - "NEXT_PUBLIC_HUB_URL=https://chanv-apps-hub-dev-802272023583.northamerica-northeast1.run.app"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:latest"
+      - "."
+
+  - name: "gcr.io/cloud-builders/docker"
+    id: PushBuildId
+    args: ["push", "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"]
+  - name: "gcr.io/cloud-builders/docker"
+    id: PushLatest
+    args: ["push", "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:latest"]
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: Deploy
+    entrypoint: "gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "gestionnaire-donnees-mailerlite-dev"
+      - "--image=gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"
+      - "--region=northamerica-northeast1"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+      - "--set-env-vars=^;^APP_PUBLIC_URL=https://gestionnaire-donnees-mailerlite-dev-802272023583.northamerica-northeast1.run.app"
+      - "--set-secrets=FIREBASE_SERVICE_ACCOUNT_JSON=FIREBASE_SERVICE_ACCOUNT_JSON:latest"
+
+images:
+  - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"
+  - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:latest"
+
+options:
+  machineType: "E2_HIGHCPU_8"
+  logging: CLOUD_LOGGING_ONLY

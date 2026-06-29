@@ -60,7 +60,7 @@ export default function LoginPage() {
               try { localStorage.setItem("chanv_sidebar_favorites", JSON.stringify(result.favorites)); } catch {}
             }
           }
-          window.location.href = "/mailerlite";
+          window.location.href = "/accounts";
           return;
         }
         console.warn("SSO refused");
@@ -75,7 +75,7 @@ export default function LoginPage() {
   // Redirection si déjà connecté
   useEffect(() => {
     if (session) {
-      router.replace("/mailerlite");
+      router.replace("/accounts");
     }
   }, [session, router]);
 
