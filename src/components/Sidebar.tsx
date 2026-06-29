@@ -20,13 +20,11 @@ export function Sidebar() {
   // Build app-specific links for the widget
   const getLinks = useCallback(() => {
     const links: Array<{ label: string; icon: string; href: string; mobileOnly?: boolean }> = [
-      { label: "Mes tâches", icon: "📋", href: "/mailerlite", mobileOnly: true },
+      { label: "Tableau de bord", icon: "🚀", href: "/" },
+      { label: "Comptes ML", icon: "🔑", href: "/accounts" },
+      { label: "Copies / Snapshots", icon: "📦", href: "/snapshots" },
+      { label: "Explorer", icon: "🔍", href: "/explore" },
     ];
-    if (isAdmin) {
-      links.push(
-        { label: "Toutes les tâches", icon: "📑", href: "/mailerlite", mobileOnly: true },
-      );
-    }
     return links;
   }, [isAdmin]);
 
