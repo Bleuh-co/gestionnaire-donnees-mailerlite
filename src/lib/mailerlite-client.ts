@@ -99,16 +99,25 @@ class ClassicV2Client implements IMailerLiteClient {
   }
 
   async getAccountInfo(): Promise<AccountInfo> {
-    const res = await fetchWithRetry(`${this.baseUrl}/me`, {
-      headers: this.headers(),
-    });
-    if (!res.ok) throw new Error(`ML Classic /me: ${res.status}`);
-    const data = await res.json();
-    const account = data.account || data;
+    // Classic API: /me for name/email, /stats for subscriber count
+    const [meRes, statsRes] = await Promise.all([
+      fetchWithRetry(`${this.baseUrl}/me`, { headers: this.headers() }),
+      fetchWithRetry(`${this.baseUrl}/stats`, { headers: this.headers() }),
+    ]);
+    if (!meRes.ok) throw new Error(`ML Classic /me: ${meRes.status}`);
+    const meData = await meRes.json();
+    const account = meData.account || meData;
+
+    let subscriberCount = 0;
+    if (statsRes.ok) {
+      const stats = await statsRes.json();
+      subscriberCount = stats.subscribed || 0;
+    }
+
     return {
       name: account.name || this.label,
       email: account.email || account.from || "",
-      subscriberCount: account.subscribers_count || 0,
+      subscriberCount,
     };
   }
 
@@ -126,16 +135,13 @@ class ClassicV2Client implements IMailerLiteClient {
       // Classic API search endpoint
       url = `${this.baseUrl}/subscribers/search?query=${encodeURIComponent(opts.search)}&limit=${limit}&offset=${offset}`;
     } else {
-      // List with optional type filter
-      const typeMap: Record<string, string> = {
-        active: "active",
-        unsubscribed: "unsubscribed",
-        unconfirmed: "unconfirmed",
-        bounced: "bounced",
-        junk: "junk",
-      };
-      const type = opts.status ? typeMap[opts.status] || "active" : "active";
-      url = `${this.baseUrl}/subscribers/${type}?limit=${limit}&offset=${offset}`;
+      // Classic API: /subscribers with optional type query param
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      });
+      if (opts.status) params.set("type", opts.status);
+      url = `${this.baseUrl}/subscribers?${params.toString()}`;
     }
 
     const res = await fetchWithRetry(url, { headers: this.headers() });
