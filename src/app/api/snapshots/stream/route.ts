@@ -99,81 +99,100 @@ export async function POST(req: NextRequest) {
         const docRef = await db.collection(COLLECTION).add(snapshotData);
         const snapshotId = docRef.id;
         const snapshotRef = docRef;
-
-        sendEvent("created", {
-          id: snapshotId,
-          label: defaultLabel,
-          totalSubscribers: info.subscriberCount,
-        });
-
-        // Paginate through all subscribers
-        let cursor: string | null = null;
         let fetched = 0;
-        const BATCH_SIZE = 100;
-        const allSubscribers: MLSubscriber[] = [];
 
-        // Determine throttle delay based on API type
-        // Classic API (MDH, Bleuh): ~10 req/min → 6s between pages
-        // Connect API (Chanv): higher limits → 1s between pages
-        const isClassic = client.apiType === "classic";
-        const THROTTLE_MS = isClassic ? 6_000 : 1_000;
-
-        do {
-          const result = await client.getSubscribers({
-            cursor,
-            limit: BATCH_SIZE,
+        try {
+          sendEvent("created", {
+            id: snapshotId,
+            label: defaultLabel,
+            totalSubscribers: info.subscriberCount,
           });
 
-          if (result.data.length === 0) break;
+          // Paginate through all subscribers
+          let cursor: string | null = null;
+          const BATCH_SIZE = 100;
+          const allSubscribers: MLSubscriber[] = [];
 
-          allSubscribers.push(...result.data);
-          fetched += result.data.length;
-          cursor = result.nextCursor;
+          // Determine throttle delay based on API type
+          // Classic API (MDH, Bleuh): ~10 req/min → 6s between pages
+          // Connect API (Chanv): higher limits → 1s between pages
+          const isClassic = client.apiType === "classic";
+          const THROTTLE_MS = isClassic ? 6_000 : 1_000;
 
-          // Update Firestore progress
-          const estimatedTotal = result.total > fetched ? result.total : fetched;
+          do {
+            const result = await client.getSubscribers({
+              cursor,
+              limit: BATCH_SIZE,
+            });
+
+            if (result.data.length === 0) break;
+
+            allSubscribers.push(...result.data);
+            fetched += result.data.length;
+            cursor = result.nextCursor;
+
+            // Update Firestore progress
+            const estimatedTotal = result.total > fetched ? result.total : fetched;
+            await snapshotRef.update({
+              fetchedSubscribers: fetched,
+              totalSubscribers: estimatedTotal,
+            });
+
+            // Send progress via SSE
+            sendEvent("progress", {
+              fetched,
+              total: estimatedTotal,
+              percent: estimatedTotal > 0
+                ? Math.round((fetched / estimatedTotal) * 100)
+                : 0,
+            });
+
+            // Throttle to avoid rate limits
+            if (cursor) {
+              await new Promise((r) => setTimeout(r, THROTTLE_MS));
+            }
+          } while (cursor);
+
+          // Save to GCS
+          sendEvent("status", { message: "Sauvegarde dans le cloud…" });
+          const gcsPath = await saveSubscribersToGCS(snapshotId, allSubscribers);
+
+          // Mark as completed
           await snapshotRef.update({
+            status: "completed",
             fetchedSubscribers: fetched,
-            totalSubscribers: estimatedTotal,
+            totalSubscribers: fetched,
+            gcsPath,
+            completedAt: new Date().toISOString(),
           });
 
-          // Send progress via SSE
-          sendEvent("progress", {
-            fetched,
-            total: estimatedTotal,
-            percent: estimatedTotal > 0
-              ? Math.round((fetched / estimatedTotal) * 100)
-              : 0,
+          sendEvent("completed", {
+            id: snapshotId,
+            totalSubscribers: fetched,
           });
-
-          // Throttle to avoid rate limits
-          if (cursor) {
-            await new Promise((r) => setTimeout(r, THROTTLE_MS));
-          }
-        } while (cursor);
-
-        // Save to GCS
-        sendEvent("status", { message: "Sauvegarde dans le cloud…" });
-        const gcsPath = await saveSubscribersToGCS(snapshotId, allSubscribers);
-
-        // Mark as completed
-        await snapshotRef.update({
-          status: "completed",
-          fetchedSubscribers: fetched,
-          totalSubscribers: fetched,
-          gcsPath,
-          completedAt: new Date().toISOString(),
-        });
-
-        sendEvent("completed", {
-          id: snapshotId,
-          totalSubscribers: fetched,
-        });
+        } catch (innerErr: any) {
+          console.error(`[snapshot/stream:${snapshotId}] Error:`, innerErr?.message);
+          // Mark snapshot as failed in Firestore
+          try {
+            await snapshotRef.update({
+              status: "failed",
+              errorMessage: innerErr?.message || "Erreur inconnue",
+              fetchedSubscribers: fetched,
+            });
+          } catch { /* ignore Firestore errors */ }
+          try {
+            sendEvent("error", { message: innerErr?.message || "Erreur inconnue" });
+          } catch { /* controller already closed */ }
+        }
       } catch (e: any) {
-        console.error("[snapshot/stream] Error:", e?.message);
-        sendEvent("error", { message: e?.message || "Erreur inconnue" });
+        console.error("[snapshot/stream] Init error:", e?.message);
+        try {
+          sendEvent("error", { message: e?.message || "Erreur inconnue" });
+        } catch { /* controller already closed */ }
       } finally {
-        controller.close();
+        try {
+          controller.close();
+        } catch { /* controller already closed */ }
       }
     },
   });
