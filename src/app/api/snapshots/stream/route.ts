@@ -53,10 +53,18 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      // sendEvent is fail-safe: if the client disconnects, we continue the copy
+      let clientConnected = true;
       function sendEvent(event: string, data: any) {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-        );
+        if (!clientConnected) return;
+        try {
+          controller.enqueue(
+            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+          );
+        } catch {
+          clientConnected = false;
+          console.warn("[snapshot/stream] Client disconnected, continuing copy in background");
+        }
       }
 
       try {
@@ -132,18 +140,21 @@ export async function POST(req: NextRequest) {
             cursor = result.nextCursor;
 
             // Update Firestore progress
-            const estimatedTotal = result.total > fetched ? result.total : fetched;
+            // Use initial account subscriber count as the "expected total",
+            // but track actual fetched count (may exceed active count since we fetch all statuses)
+            const knownTotal = Math.max(info.subscriberCount, fetched);
             await snapshotRef.update({
               fetchedSubscribers: fetched,
-              totalSubscribers: estimatedTotal,
+              totalSubscribers: knownTotal,
             });
 
-            // Send progress via SSE
+            // Send progress via SSE — percentage based on initial account count
+            const progressTotal = info.subscriberCount > 0 ? info.subscriberCount : fetched;
             sendEvent("progress", {
               fetched,
-              total: estimatedTotal,
-              percent: estimatedTotal > 0
-                ? Math.round((fetched / estimatedTotal) * 100)
+              total: progressTotal,
+              percent: progressTotal > 0
+                ? Math.min(99, Math.round((fetched / progressTotal) * 100))
                 : 0,
             });
 

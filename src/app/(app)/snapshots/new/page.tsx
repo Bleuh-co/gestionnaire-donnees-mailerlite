@@ -6,10 +6,20 @@ import type { MailerLiteAccount, MLGroup } from "@/lib/types";
 
 type StreamState =
   | { phase: "idle" }
-  | { phase: "running"; message: string; fetched: number; total: number; percent: number }
+  | { phase: "running"; message: string; fetched: number; total: number; percent: number; startedAt: number }
   | { phase: "saving"; message: string }
   | { phase: "completed"; snapshotId: string; total: number }
   | { phase: "error"; message: string };
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  if (mins < 60) return `${mins}m ${secs.toString().padStart(2, "0")}s`;
+  const hrs = Math.floor(mins / 60);
+  const remainMins = mins % 60;
+  return `${hrs}h ${remainMins.toString().padStart(2, "0")}m`;
+}
 
 export default function NewSnapshotPage() {
   const router = useRouter();
@@ -25,6 +35,7 @@ export default function NewSnapshotPage() {
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [stream, setStream] = useState<StreamState>({ phase: "idle" });
   const abortRef = useRef<AbortController | null>(null);
+  const startTimeRef = useRef<number>(0);
 
   // Charger les comptes
   useEffect(() => {
@@ -54,8 +65,16 @@ export default function NewSnapshotPage() {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    startTimeRef.current = Date.now();
 
-    setStream({ phase: "running", message: "Démarrage…", fetched: 0, total: 0, percent: 0 });
+    setStream({
+      phase: "running",
+      message: "Démarrage…",
+      fetched: 0,
+      total: 0,
+      percent: 0,
+      startedAt: Date.now(),
+    });
 
     try {
       const res = await fetch("/api/snapshots/stream", {
@@ -125,6 +144,7 @@ export default function NewSnapshotPage() {
           fetched: data.fetched,
           total: data.total,
           percent: data.percent,
+          startedAt: startTimeRef.current,
         });
         break;
       case "completed":
@@ -140,7 +160,32 @@ export default function NewSnapshotPage() {
     }
   };
 
+  // Compute ETA
+  const getETA = (): string | null => {
+    if (stream.phase !== "running" || stream.fetched === 0 || stream.total === 0) return null;
+    const elapsed = (Date.now() - stream.startedAt) / 1000; // seconds
+    const rate = stream.fetched / elapsed; // subscribers per second
+    const remaining = stream.total - stream.fetched;
+    if (rate <= 0 || remaining <= 0) return null;
+    const etaSeconds = remaining / rate;
+    return formatDuration(etaSeconds);
+  };
+
+  const getElapsed = (): string | null => {
+    if (stream.phase !== "running") return null;
+    const elapsed = (Date.now() - stream.startedAt) / 1000;
+    return formatDuration(elapsed);
+  };
+
   const isProcessing = stream.phase === "running" || stream.phase === "saving";
+
+  // Force re-render every second for ETA updates
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!isProcessing) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isProcessing]);
 
   return (
     <main className="py-6 max-w-2xl">
@@ -248,20 +293,31 @@ export default function NewSnapshotPage() {
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
                   <span>{stream.message}</span>
                   {stream.phase === "running" && stream.percent > 0 && (
-                    <span className="font-mono">{stream.percent}%</span>
+                    <span className="font-mono font-semibold">{stream.percent}%</span>
                   )}
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all duration-300 ease-out"
+                    className="h-full rounded-full transition-all duration-500 ease-out"
                     style={{
-                      width: stream.phase === "running" ? `${Math.max(stream.percent, 2)}%` : "100%",
+                      width: stream.phase === "running"
+                        ? `${Math.max(Math.min(stream.percent, 100), 2)}%`
+                        : "100%",
                       background: stream.phase === "saving"
                         ? "linear-gradient(90deg, #c4a265, #d4b87a)"
                         : "linear-gradient(90deg, #4f8c5e, #6ab07a)",
                     }}
                   />
                 </div>
+                {/* ETA + Elapsed */}
+                {stream.phase === "running" && stream.fetched > 0 && (
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>⏱ Écoulé : {getElapsed()}</span>
+                    {getETA() && (
+                      <span>⏳ Restant : ~{getETA()}</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

@@ -111,7 +111,9 @@ class ClassicV2Client implements IMailerLiteClient {
     let subscriberCount = 0;
     if (statsRes.ok) {
       const stats = await statsRes.json();
-      subscriberCount = stats.subscribed || 0;
+      // Include all statuses so snapshot progress is accurate
+      // (the snapshot copies ALL subscribers, not just active ones)
+      subscriberCount = (stats.subscribed || 0) + (stats.unsubscribed || 0);
     }
 
     return {
