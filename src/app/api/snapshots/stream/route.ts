@@ -112,6 +112,12 @@ export async function POST(req: NextRequest) {
         const BATCH_SIZE = 100;
         const allSubscribers: MLSubscriber[] = [];
 
+        // Determine throttle delay based on API type
+        // Classic API (MDH, Bleuh): ~10 req/min → 6s between pages
+        // Connect API (Chanv): higher limits → 1s between pages
+        const isClassic = client.apiType === "classic";
+        const THROTTLE_MS = isClassic ? 6_000 : 1_000;
+
         do {
           const result = await client.getSubscribers({
             cursor,
@@ -139,6 +145,11 @@ export async function POST(req: NextRequest) {
               ? Math.round((fetched / estimatedTotal) * 100)
               : 0,
           });
+
+          // Throttle to avoid rate limits
+          if (cursor) {
+            await new Promise((r) => setTimeout(r, THROTTLE_MS));
+          }
         } while (cursor);
 
         // Save to GCS

@@ -52,15 +52,15 @@ interface IMailerLiteClient {
 async function fetchWithRetry(
   url: string,
   init: RequestInit,
-  retries = 3
+  retries = 8
 ): Promise<Response> {
   for (let attempt = 0; attempt < retries; attempt++) {
     const res = await fetch(url, init);
     if (res.status === 429) {
-      const retryAfter = parseInt(res.headers.get("retry-after") || "5", 10);
-      const wait = Math.min(retryAfter * 1000, 30_000) * (attempt + 1);
+      const retryAfter = parseInt(res.headers.get("retry-after") || "10", 10);
+      const wait = Math.min(retryAfter * 1000, 60_000) * Math.pow(1.5, attempt);
       console.warn(
-        `[ML] Rate limited, waiting ${wait}ms (attempt ${attempt + 1}/${retries})`
+        `[ML] Rate limited, waiting ${Math.round(wait / 1000)}s (attempt ${attempt + 1}/${retries})`
       );
       await new Promise((r) => setTimeout(r, wait));
       continue;
