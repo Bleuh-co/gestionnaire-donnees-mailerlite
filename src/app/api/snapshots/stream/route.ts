@@ -67,6 +67,16 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Heartbeat to keep SSE connection alive (Cloud Run / proxy idle timeout)
+      const heartbeat = setInterval(() => {
+        if (!clientConnected) return;
+        try {
+          controller.enqueue(encoder.encode(": heartbeat\n\n"));
+        } catch {
+          clientConnected = false;
+        }
+      }, 3_000);
+
       try {
         const db = adminDb();
 
@@ -201,6 +211,7 @@ export async function POST(req: NextRequest) {
           sendEvent("error", { message: e?.message || "Erreur inconnue" });
         } catch { /* controller already closed */ }
       } finally {
+        clearInterval(heartbeat);
         try {
           controller.close();
         } catch { /* controller already closed */ }
