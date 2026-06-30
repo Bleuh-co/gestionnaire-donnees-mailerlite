@@ -1,5 +1,6 @@
 import "server-only";
 import { firebaseAdmin } from "./firebase-admin";
+import { getServiceAccountForGoogle } from "./firebase-admin";
 import { getStorage } from "firebase-admin/storage";
 
 /**
@@ -12,7 +13,18 @@ import { getStorage } from "firebase-admin/storage";
 const BUCKET_FOLDER = "ml-snapshots";
 
 function getBucket() {
-  const bucketName = process.env.GCS_BUCKET || undefined;
+  // Use explicit env var, or derive from service account project ID
+  let bucketName = process.env.GCS_BUCKET;
+  if (!bucketName) {
+    const sa = getServiceAccountForGoogle();
+    const projectId = sa?.project_id || process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
+    if (projectId) {
+      bucketName = `${projectId}.firebasestorage.app`;
+    }
+  }
+  if (!bucketName) {
+    throw new Error("GCS bucket not configured. Set GCS_BUCKET env var or FIREBASE_SERVICE_ACCOUNT_JSON.");
+  }
   return getStorage(firebaseAdmin()).bucket(bucketName);
 }
 

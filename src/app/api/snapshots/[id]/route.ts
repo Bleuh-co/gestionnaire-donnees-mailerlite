@@ -31,7 +31,7 @@ export async function GET(
   }
 }
 
-// DELETE /api/snapshots/[id] → supprime le snapshot Firestore + fichier GCS
+// DELETE /api/snapshots/[id] → supprime le snapshot (GCS + Firestore)
 export async function DELETE(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -49,10 +49,33 @@ export async function DELETE(
       );
     }
 
-    // Supprimer le fichier GCS
-    await deleteSnapshotFromGCS(id);
+    const data = doc.data()!;
 
-    // Supprimer le document Firestore
+    // Supprimer le fichier GCS (si existe)
+    try {
+      await deleteSnapshotFromGCS(id);
+    } catch (e: any) {
+      console.warn(`[delete] GCS cleanup skipped for ${id}:`, e?.message);
+    }
+
+    // Supprimer l'ancienne sous-collection subscribers (si existe, pour rétro-compat)
+    if (!data.gcsPath) {
+      try {
+        let subsSnap = await snapshotRef.collection("subscribers").limit(500).get();
+        while (!subsSnap.empty) {
+          const batch = db.batch();
+          for (const subDoc of subsSnap.docs) {
+            batch.delete(subDoc.ref);
+          }
+          await batch.commit();
+          subsSnap = await snapshotRef.collection("subscribers").limit(500).get();
+        }
+      } catch (e: any) {
+        console.warn(`[delete] Subcollection cleanup skipped for ${id}:`, e?.message);
+      }
+    }
+
+    // Supprimer le document snapshot
     await snapshotRef.delete();
 
     return NextResponse.json({ success: true });

@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { MailerLiteAccount, MLGroup } from "@/lib/types";
+
+type StreamState =
+  | { phase: "idle" }
+  | { phase: "running"; message: string; fetched: number; total: number; percent: number }
+  | { phase: "saving"; message: string }
+  | { phase: "completed"; snapshotId: string; total: number }
+  | { phase: "error"; message: string };
 
 export default function NewSnapshotPage() {
   const router = useRouter();
@@ -15,9 +22,9 @@ export default function NewSnapshotPage() {
   const [scope, setScope] = useState<"all" | "group">("all");
   const [groupId, setGroupId] = useState("");
   const [label, setLabel] = useState("");
-  const [loading, setLoading] = useState(false);
   const [loadingGroups, setLoadingGroups] = useState(false);
-  const [error, setError] = useState("");
+  const [stream, setStream] = useState<StreamState>({ phase: "idle" });
+  const abortRef = useRef<AbortController | null>(null);
 
   // Charger les comptes
   useEffect(() => {
@@ -43,12 +50,15 @@ export default function NewSnapshotPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountId) return;
-    setLoading(true);
-    setError("");
+    if (!accountId || stream.phase === "running" || stream.phase === "saving") return;
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setStream({ phase: "running", message: "Démarrage…", fetched: 0, total: 0, percent: 0 });
 
     try {
-      const res = await fetch("/api/snapshots", {
+      const res = await fetch("/api/snapshots/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -57,20 +67,80 @@ export default function NewSnapshotPage() {
           ...(scope === "group" && { groupId }),
           ...(label && { label }),
         }),
+        signal: controller.signal,
       });
 
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Erreur ${res.status}`);
       }
 
-      const snapshot = await res.json();
-      router.push(`/snapshots/${snapshot.id}`);
+      // Read SSE stream
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        let eventType = "";
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ") && eventType) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              handleSSEEvent(eventType, data);
+            } catch { /* ignore parse errors */ }
+            eventType = "";
+          }
+        }
+      }
     } catch (err: any) {
-      setError(err.message || "Erreur inconnue");
-      setLoading(false);
+      if (err.name !== "AbortError") {
+        setStream({ phase: "error", message: err.message || "Erreur inconnue" });
+      }
     }
   };
+
+  const handleSSEEvent = (event: string, data: any) => {
+    switch (event) {
+      case "status":
+        setStream((prev) => {
+          if (prev.phase === "running") {
+            return { ...prev, message: data.message };
+          }
+          return { phase: "saving", message: data.message };
+        });
+        break;
+      case "progress":
+        setStream({
+          phase: "running",
+          message: `${data.fetched.toLocaleString("fr-CA")} / ${data.total.toLocaleString("fr-CA")} abonnés`,
+          fetched: data.fetched,
+          total: data.total,
+          percent: data.percent,
+        });
+        break;
+      case "completed":
+        setStream({
+          phase: "completed",
+          snapshotId: data.id,
+          total: data.totalSubscribers,
+        });
+        break;
+      case "error":
+        setStream({ phase: "error", message: data.message });
+        break;
+    }
+  };
+
+  const isProcessing = stream.phase === "running" || stream.phase === "saving";
 
   return (
     <main className="py-6 max-w-2xl">
@@ -92,6 +162,7 @@ export default function NewSnapshotPage() {
               setGroupId("");
             }}
             required
+            disabled={isProcessing}
           >
             <option value="">— Sélectionner —</option>
             {accounts.map((acc) => (
@@ -113,6 +184,7 @@ export default function NewSnapshotPage() {
                 value="all"
                 checked={scope === "all"}
                 onChange={() => setScope("all")}
+                disabled={isProcessing}
               />
               <span className="text-sm">Tous les abonnés</span>
             </label>
@@ -123,13 +195,14 @@ export default function NewSnapshotPage() {
                 value="group"
                 checked={scope === "group"}
                 onChange={() => setScope("group")}
+                disabled={isProcessing}
               />
               <span className="text-sm">Un groupe spécifique</span>
             </label>
           </div>
         </div>
 
-        {/* Groupe (si scope=group) */}
+        {/* Groupe */}
         {scope === "group" && (
           <div>
             <label className="label label-required">Groupe</label>
@@ -138,7 +211,7 @@ export default function NewSnapshotPage() {
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
               required
-              disabled={loadingGroups}
+              disabled={loadingGroups || isProcessing}
             >
               <option value="">
                 {loadingGroups ? "Chargement…" : "— Sélectionner —"}
@@ -162,32 +235,81 @@ export default function NewSnapshotPage() {
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             maxLength={120}
+            disabled={isProcessing}
           />
         </div>
 
-        {/* Erreur */}
-        {error && (
-          <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
-            {error}
+        {/* Barre de progression */}
+        {stream.phase !== "idle" && (
+          <div className="space-y-3">
+            {/* Progress bar */}
+            {(stream.phase === "running" || stream.phase === "saving") && (
+              <div>
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>{stream.message}</span>
+                  {stream.phase === "running" && stream.percent > 0 && (
+                    <span className="font-mono">{stream.percent}%</span>
+                  )}
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300 ease-out"
+                    style={{
+                      width: stream.phase === "running" ? `${Math.max(stream.percent, 2)}%` : "100%",
+                      background: stream.phase === "saving"
+                        ? "linear-gradient(90deg, #c4a265, #d4b87a)"
+                        : "linear-gradient(90deg, #4f8c5e, #6ab07a)",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Completed */}
+            {stream.phase === "completed" && (
+              <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-center space-y-3">
+                <div className="text-green-700 font-semibold">
+                  ✅ Copie terminée — {stream.total.toLocaleString("fr-CA")} abonnés sauvegardés
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => router.push(`/snapshots/${stream.snapshotId}`)}
+                >
+                  Voir la copie →
+                </button>
+              </div>
+            )}
+
+            {/* Error */}
+            {stream.phase === "error" && (
+              <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                ❌ {stream.message}
+              </div>
+            )}
           </div>
         )}
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            className="btn-primary flex-1"
-            disabled={loading || !accountId}
-          >
-            {loading ? "⏳ Lancement…" : "🚀 Lancer la copie"}
-          </button>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => router.push("/snapshots")}
-          >
-            Annuler
-          </button>
+          {stream.phase !== "completed" && (
+            <button
+              type="submit"
+              className="btn-primary flex-1"
+              disabled={isProcessing || !accountId}
+            >
+              {isProcessing ? "⏳ Copie en cours…" : "🚀 Lancer la copie"}
+            </button>
+          )}
+          {!isProcessing && (
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => router.push("/snapshots")}
+            >
+              {stream.phase === "completed" ? "Retour" : "Annuler"}
+            </button>
+          )}
         </div>
       </form>
     </main>
