@@ -76,7 +76,7 @@ export default function NewSnapshotPage() {
     <main className="py-6 max-w-2xl">
       <h1 className="text-2xl font-bold mb-2">📦 Nouvelle copie</h1>
       <p className="text-sm text-gray-500 mb-8">
-        Sauvegarder la base d&apos;abonnés MailerLite dans Firestore
+        Sauvegarder la base d&apos;abonnés MailerLite dans le cloud
       </p>
 
       <form onSubmit={handleSubmit} className="section-card p-8 space-y-6">
