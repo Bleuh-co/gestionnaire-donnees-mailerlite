@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SubscriberTable } from "@/components/SubscriberTable";
+import { useT, useLocale } from "@/lib/i18n";
 import type { MailerLiteAccount, MLGroup } from "@/lib/types";
 
 export default function ExploreAccountPage({
@@ -15,6 +16,8 @@ export default function ExploreAccountPage({
   const [groups, setGroups] = useState<MLGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
 
   useEffect(() => {
     params.then(({ accountId }) => setAccountId(accountId));
@@ -41,7 +44,7 @@ export default function ExploreAccountPage({
     return (
       <main className="py-6">
         <div className="card p-12 text-center text-gray-400 animate-pulse">
-          Chargement…
+          {t("explore.loading")}
         </div>
       </main>
     );
@@ -51,7 +54,7 @@ export default function ExploreAccountPage({
     return (
       <main className="py-6">
         <div className="card p-12 text-center text-gray-400">
-          Compte introuvable
+          {t("explore.notFound")}
         </div>
       </main>
     );
@@ -65,7 +68,7 @@ export default function ExploreAccountPage({
         onClick={() => router.push("/explore")}
         className="btn-ghost text-xs mb-4"
       >
-        ← Retour
+        {t("explore.back")}
       </button>
 
       <div className="flex items-start justify-between mb-6">
@@ -74,8 +77,10 @@ export default function ExploreAccountPage({
             {emoji} {account.label}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {(account.subscriberCount || 0).toLocaleString("fr-CA")} abonnés •
-            Données en direct
+            {t("explore.subscribersCount", {
+              n: (account.subscriberCount || 0).toLocaleString(locale),
+            })}{" "}
+            • {t("explore.liveData")}
           </p>
         </div>
       </div>
@@ -84,14 +89,14 @@ export default function ExploreAccountPage({
       {groups.length > 0 && (
         <div className="card p-6 mb-6">
           <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3">
-            Groupes
+            {t("explore.groups")}
           </h2>
           <div className="flex flex-wrap gap-2">
             {groups.map((g) => (
               <span key={g.id} className="badge-neutral text-xs">
                 {g.name}{" "}
                 <span className="text-gray-400 ml-1">
-                  ({g.activeCount.toLocaleString("fr-CA")})
+                  ({g.activeCount.toLocaleString(locale)})
                 </span>
               </span>
             ))}
@@ -101,7 +106,7 @@ export default function ExploreAccountPage({
 
       {/* Table abonnés (live) */}
       <div className="card p-6">
-        <h2 className="text-lg font-bold mb-4">👥 Abonnés (en direct)</h2>
+        <h2 className="text-lg font-bold mb-4">{t("explore.liveSubscribers")}</h2>
         <SubscriberTable
           fetchUrl={`/api/accounts/${accountId}/subscribers`}
           cursorMode

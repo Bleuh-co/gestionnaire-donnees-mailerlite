@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SubscriberTable } from "@/components/SubscriberTable";
+import { useT, useLocale } from "@/lib/i18n";
 import type { Snapshot } from "@/lib/types";
 
 export default function SnapshotDetailPage({
@@ -15,6 +16,8 @@ export default function SnapshotDetailPage({
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
 
   useEffect(() => {
     params.then(({ id }) => setId(id));
@@ -50,7 +53,7 @@ export default function SnapshotDetailPage({
     return (
       <main className="py-6">
         <div className="card p-12 text-center text-gray-400 animate-pulse">
-          Chargement…
+          {t("snapshotDetail.loading")}
         </div>
       </main>
     );
@@ -60,7 +63,7 @@ export default function SnapshotDetailPage({
     return (
       <main className="py-6">
         <div className="card p-12 text-center text-gray-400">
-          Snapshot introuvable
+          {t("snapshotDetail.notFound")}
         </div>
       </main>
     );
@@ -82,12 +85,12 @@ export default function SnapshotDetailPage({
             onClick={() => router.push("/snapshots")}
             className="btn-ghost text-xs mb-2"
           >
-            ← Retour aux snapshots
+            {t("snapshotDetail.back")}
           </button>
           <h1 className="text-2xl font-bold">{snapshot.label}</h1>
           <p className="text-sm text-gray-500 mt-1">
             {snapshot.accountLabel} •{" "}
-            {new Date(snapshot.createdAt).toLocaleDateString("fr-CA", {
+            {new Date(snapshot.createdAt).toLocaleDateString(locale, {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -102,16 +105,23 @@ export default function SnapshotDetailPage({
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard
-          label="Abonnés copiés"
-          value={snapshot.fetchedSubscribers.toLocaleString("fr-CA")}
+          label={t("snapshotDetail.copied")}
+          value={snapshot.fetchedSubscribers.toLocaleString(locale)}
         />
         <StatCard
-          label="Total estimé"
-          value={snapshot.totalSubscribers.toLocaleString("fr-CA")}
+          label={t("snapshotDetail.totalEstimated")}
+          value={snapshot.totalSubscribers.toLocaleString(locale)}
         />
-        <StatCard label="Portée" value={snapshot.scope === "all" ? "Tous" : snapshot.groupName || "Groupe"} />
         <StatCard
-          label="Par"
+          label={t("snapshotDetail.scope")}
+          value={
+            snapshot.scope === "all"
+              ? t("snapshotDetail.scopeAll")
+              : snapshot.groupName || t("snapshotDetail.scopeGroup")
+          }
+        />
+        <StatCard
+          label={t("snapshotDetail.by")}
           value={snapshot.createdByEmail.split("@")[0]}
         />
       </div>
@@ -121,7 +131,9 @@ export default function SnapshotDetailPage({
         <div className="card p-6 mb-8">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold">
-              {snapshot.status === "pending" ? "En attente…" : "Copie en cours…"}
+              {snapshot.status === "pending"
+                ? t("snapshotDetail.pending")
+                : t("snapshotDetail.copying")}
             </span>
             <span className="text-sm text-gray-500">{progress}%</span>
           </div>
@@ -132,8 +144,10 @@ export default function SnapshotDetailPage({
             />
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            {snapshot.fetchedSubscribers.toLocaleString("fr-CA")} abonnés
-            copiés sur ~{snapshot.totalSubscribers.toLocaleString("fr-CA")}
+            {t("snapshotDetail.progressDetail", {
+              fetched: snapshot.fetchedSubscribers.toLocaleString(locale),
+              total: snapshot.totalSubscribers.toLocaleString(locale),
+            })}
           </p>
         </div>
       )}
@@ -142,7 +156,7 @@ export default function SnapshotDetailPage({
       {snapshot.status === "failed" && snapshot.errorMessage && (
         <div className="card p-6 mb-8 border-red-200 bg-red-50">
           <p className="text-sm text-red-700">
-            ❌ <strong>Erreur :</strong> {snapshot.errorMessage}
+            ❌ <strong>{t("snapshotDetail.errorLabel")}</strong> {snapshot.errorMessage}
           </p>
         </div>
       )}
@@ -155,14 +169,14 @@ export default function SnapshotDetailPage({
             className="btn-primary text-sm"
             download
           >
-            📥 Exporter CSV
+            {t("snapshotDetail.exportCsv")}
           </a>
           <a
             href={`/api/snapshots/${id}/export?format=json`}
             className="btn-secondary text-sm"
             download
           >
-            📥 Exporter JSON
+            {t("snapshotDetail.exportJson")}
           </a>
         </div>
       )}
@@ -171,7 +185,9 @@ export default function SnapshotDetailPage({
       {snapshot.status === "completed" && (
         <div className="card p-6">
           <h2 className="text-lg font-bold mb-4">
-            👥 Abonnés ({snapshot.fetchedSubscribers.toLocaleString("fr-CA")})
+            {t("snapshotDetail.subscribers", {
+              n: snapshot.fetchedSubscribers.toLocaleString(locale),
+            })}
           </h2>
           <SubscriberTable fetchUrl={`/api/snapshots/${id}/subscribers`} />
         </div>

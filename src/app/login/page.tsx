@@ -5,13 +5,15 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { allowedDomains } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export default function LoginPage() {
   const { session, signInWithGoogle, loading } = useAuth();
   const router = useRouter();
+  const t = useT();
   const [ssoChecking, setSsoChecking] = useState(false);
 
-  // SSO depuis Apps-Hub via #sso=<token>
+  // Repli SSO depuis Apps-Hub via #sso=<token> (conservé en complément du SDK)
   useEffect(() => {
     const hash = window.location.hash;
     if (!hash || !hash.startsWith("#sso=")) return;
@@ -19,7 +21,7 @@ export default function LoginPage() {
     const ssoToken = hash.substring(5);
     history.replaceState(null, "", window.location.pathname + window.location.search);
 
-    const HUB_URL = process.env.NEXT_PUBLIC_HUB_URL || "https://chanv-apps-hub-271227085398.northamerica-northeast1.run.app";
+    const HUB_URL = process.env.NEXT_PUBLIC_HUB_URL || "https://gandalf.chanv.com";
 
     setSsoChecking(true);
     (async () => {
@@ -91,7 +93,7 @@ export default function LoginPage() {
             Groupe Chanv
           </p>
           <p className="text-sm text-slate-500 mt-5 leading-relaxed">
-            Connexion réservée aux domaines&nbsp;
+            {t("login.domains")}&nbsp;
             <span className="font-semibold text-chanv-terre">
               {allowedDomains().join(", ")}
             </span>
@@ -103,13 +105,13 @@ export default function LoginPage() {
           className="btn-primary w-full py-4 text-base"
         >
           {ssoChecking
-            ? "Connexion SSO en cours..."
+            ? t("login.ssoChecking")
             : loading
-            ? "Chargement..."
-            : "Se connecter avec Google"}
+            ? t("login.loading")
+            : t("login.signIn")}
         </button>
         <p className="text-xs text-slate-400 text-center mt-6 leading-relaxed">
-          Une session s&apos;ouvrira pour 5 jours.
+          {t("login.sessionInfo")}
         </p>
       </div>
     </main>

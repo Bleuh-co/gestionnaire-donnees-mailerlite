@@ -1,57 +1,74 @@
+# Build + déploiement Gestionnaire données MailerLite — modèle Gandalf
+# (xero_photo_achat). Build de l'image avec install du SDK privé @bleuh-co via
+# secret BuildKit (jamais gravé dans l'image), push Artifact Registry us-east1,
+# déploiement Cloud Run us-east1 dans antigravity PROD.
+#
+# CORRECTIF : l'ancien cloudbuild pointait le projet DEV (gandalf-dev-497413)
+# et le hub dev — ce fichier cible désormais antigravity-20260107 + gandalf.chanv.com.
+#
+# IMPORTANT : les NEXT_PUBLIC_* sont inlinés AU BUILD (voir Dockerfile).
+# Les env vars RUNTIME sont posées via --update-env-vars / --update-secrets
+# (préserve les autres env vars du service d'une révision à l'autre).
+
+substitutions:
+  _SERVICE: gestionnaire-donnees-mailerlite
+  _REGION_DEPLOY: us-east1
+  _TAG: latest
+  _IMAGE: us-east1-docker.pkg.dev/antigravity-20260107/cloud-run-source-deploy/gestionnaire-donnees-mailerlite
+
 steps:
-  # 1) Build de l'image Docker.
-  #    Les NEXT_PUBLIC_* doivent être inlinés au moment du `next build`,
-  #    pas au runtime. La config web Firebase est publique par design.
-  - name: "gcr.io/cloud-builders/docker"
-    id: Build
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    secretEnv: ["GH_PKG_TOKEN"]
     args:
-      - "build"
-      - "--build-arg"
-      - "NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyCyGRvYpQPpr27fIJQ5-w8yeR-yzVDtdRY"
-      - "--build-arg"
-      - "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=gandalf-dev-497413.firebaseapp.com"
-      - "--build-arg"
-      - "NEXT_PUBLIC_FIREBASE_PROJECT_ID=gandalf-dev-497413"
-      - "--build-arg"
-      - "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=gandalf-dev-497413.firebasestorage.app"
-      - "--build-arg"
-      - "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=802272023583"
-      - "--build-arg"
-      - "NEXT_PUBLIC_FIREBASE_APP_ID=1:802272023583:web:b75abb24714f154a28312a"
-      - "--build-arg"
-      - "NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=chanv.com,bleuh.co,lafeuilleverte.ca,maisondherbes.com"
-      - "--build-arg"
-      - "NEXT_PUBLIC_HUB_URL=https://chanv-apps-hub-dev-802272023583.northamerica-northeast1.run.app"
-      - "-t"
-      - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"
-      - "-t"
-      - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:latest"
-      - "."
+      - -c
+      - |
+        set -euo pipefail
+        trap 'rm -f /workspace/gh_token' EXIT
+        printf '%s' "$$GH_PKG_TOKEN" > /workspace/gh_token
+        DOCKER_BUILDKIT=1 docker build \
+          --secret id=gh_token,src=/workspace/gh_token \
+          --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBj17yDs3xOQq8lFYjOfx3TmKTeIPANNXs \
+          --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=antigravity-20260107.firebaseapp.com \
+          --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=antigravity-20260107 \
+          --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=antigravity-20260107.firebasestorage.app \
+          --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=271227085398 \
+          --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=1:271227085398:web:dd67b650261fbb28d551f7 \
+          --build-arg NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=chanv.com,bleuh.co,lafeuilleverte.ca,maisondherbes.com \
+          --build-arg NEXT_PUBLIC_HUB_URL=https://gandalf.chanv.com \
+          -t "${_IMAGE}:${_TAG}" .
+        rm -f /workspace/gh_token
 
-  - name: "gcr.io/cloud-builders/docker"
-    id: PushBuildId
-    args: ["push", "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"]
-  - name: "gcr.io/cloud-builders/docker"
-    id: PushLatest
-    args: ["push", "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:latest"]
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "${_IMAGE}:${_TAG}"]
 
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    id: Deploy
-    entrypoint: "gcloud"
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
     args:
-      - "run"
-      - "deploy"
-      - "gestionnaire-donnees-mailerlite-dev"
-      - "--image=gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"
-      - "--region=northamerica-northeast1"
-      - "--platform=managed"
-      - "--allow-unauthenticated"
-      - "--set-env-vars=^;^APP_PUBLIC_URL=https://gestionnaire-donnees-mailerlite-dev-802272023583.northamerica-northeast1.run.app"
-      - "--set-secrets=FIREBASE_SERVICE_ACCOUNT_JSON=FIREBASE_SERVICE_ACCOUNT_JSON:latest,MAILERLITE_API_KEY=MAILERLITE_API_KEY:latest,MAILERLITE_CHANV_API_KEY=MAILERLITE_CHANV_API_KEY:latest,MAILERLITE_BLEUH_API_KEY=MAILERLITE_BLEUH_API_KEY:latest"
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}:${_TAG}
+      - --project=antigravity-20260107
+      - --region=${_REGION_DEPLOY}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --memory=1Gi
+      - --cpu=1
+      - --update-env-vars=^;^HUB_URL=https://gandalf.chanv.com;APP_PUBLIC_URL=https://gestionnaire-donnees-mailerlite-271227085398.us-east1.run.app
+      - --update-secrets=FIREBASE_SERVICE_ACCOUNT_JSON=FIREBASE_SERVICE_ACCOUNT_JSON:latest,MAILERLITE_API_KEY=MAILERLITE_API_KEY:latest,MAILERLITE_CHANV_API_KEY=MAILERLITE_CHANV_API_KEY:latest,MAILERLITE_BLEUH_API_KEY=MAILERLITE_BLEUH_API_KEY:latest
 
 images:
-  - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:$BUILD_ID"
-  - "gcr.io/$PROJECT_ID/gestionnaire-donnees-mailerlite:latest"
+  - "${_IMAGE}:${_TAG}"
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/antigravity-20260107/secrets/GITHUB_PACKAGES_TOKEN/versions/latest
+      env: GH_PKG_TOKEN
 
 options:
   machineType: "E2_HIGHCPU_8"

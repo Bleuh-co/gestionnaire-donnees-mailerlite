@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useT, useLocale } from "@/lib/i18n";
 import type { MLSubscriber, SubscriberStatus } from "@/lib/types";
 
 interface Props {
@@ -19,6 +20,8 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
   const [cursor, setCursor] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const limit = 50;
+  const t = useT();
+  const locale = useLocale();
 
   const load = useCallback(
     async (p: number, s: string, st: string) => {
@@ -85,7 +88,7 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
         <input
           type="text"
           className="input flex-1"
-          placeholder="🔍 Rechercher par email…"
+          placeholder={t("table.searchPlaceholder")}
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
         />
@@ -94,12 +97,12 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
           value={status}
           onChange={(e) => handleStatusChange(e.target.value)}
         >
-          <option value="">Tous les statuts</option>
-          <option value="active">Actif</option>
-          <option value="unsubscribed">Désabonné</option>
-          <option value="unconfirmed">Non confirmé</option>
-          <option value="bounced">Bounced</option>
-          <option value="junk">Junk</option>
+          <option value="">{t("table.allStatuses")}</option>
+          <option value="active">{t("subStatus.active")}</option>
+          <option value="unsubscribed">{t("subStatus.unsubscribed")}</option>
+          <option value="unconfirmed">{t("subStatus.unconfirmed")}</option>
+          <option value="bounced">{t("subStatus.bounced")}</option>
+          <option value="junk">{t("subStatus.junk")}</option>
         </select>
       </div>
 
@@ -109,16 +112,16 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
           <thead>
             <tr className="border-b-2 border-chanv-fibre text-left">
               <th className="py-3 px-3 font-semibold" scope="col">
-                Email
+                {t("table.colEmail")}
               </th>
               <th className="py-3 px-3 font-semibold" scope="col">
-                Statut
+                {t("table.colStatus")}
               </th>
               <th className="py-3 px-3 font-semibold hidden md:table-cell" scope="col">
-                Groupes
+                {t("table.colGroups")}
               </th>
               <th className="py-3 px-3 font-semibold hidden lg:table-cell" scope="col">
-                Champs
+                {t("table.colFields")}
               </th>
             </tr>
           </thead>
@@ -143,7 +146,7 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-8 text-center text-gray-400">
-                  Aucun abonné trouvé
+                  {t("table.empty")}
                 </td>
               </tr>
             ) : (
@@ -181,7 +184,9 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
       {!loading && total > 0 && (
         <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
           <span>
-            {total.toLocaleString("fr-CA")} abonné{total > 1 ? "s" : ""}
+            {t(total > 1 ? "table.countPlural" : "table.count", {
+              n: total.toLocaleString(locale),
+            })}
           </span>
           {!cursorMode && (
             <div className="flex gap-2">
@@ -194,7 +199,7 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
                   load(p, search, status);
                 }}
               >
-                ← Précédent
+                {t("table.prev")}
               </button>
               <span className="py-1 px-2">
                 {page} / {totalPages}
@@ -208,7 +213,7 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
                   load(p, search, status);
                 }}
               >
-                Suivant →
+                {t("table.next")}
               </button>
             </div>
           )}
@@ -221,7 +226,7 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
                 load(p, search, status);
               }}
             >
-              Charger plus →
+              {t("table.loadMore")}
             </button>
           )}
         </div>
@@ -231,6 +236,7 @@ export function SubscriberTable({ fetchUrl, cursorMode = false }: Props) {
 }
 
 function StatusPill({ status }: { status: string }) {
+  const t = useT();
   const colors: Record<string, string> = {
     active: "bg-green-100 text-green-800",
     unsubscribed: "bg-red-100 text-red-800",
@@ -238,11 +244,12 @@ function StatusPill({ status }: { status: string }) {
     bounced: "bg-orange-100 text-orange-800",
     junk: "bg-gray-200 text-gray-600",
   };
+  const known = ["active", "unsubscribed", "unconfirmed", "bounced", "junk"];
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${colors[status] || colors.active}`}
     >
-      {status}
+      {known.includes(status) ? t(`subStatus.${status}`) : status}
     </span>
   );
 }

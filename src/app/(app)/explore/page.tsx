@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useT, useLocale } from "@/lib/i18n";
 import type { MailerLiteAccount } from "@/lib/types";
 
 export default function ExplorePage() {
   const [accounts, setAccounts] = useState<MailerLiteAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useT();
+  const locale = useLocale();
 
   useEffect(() => {
     fetch("/api/accounts")
@@ -19,10 +22,8 @@ export default function ExplorePage() {
   return (
     <main className="py-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold">🔍 Explorer en direct</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Consulter les abonnés en direct sur MailerLite (pas de copie)
-        </p>
+        <h1 className="text-2xl font-bold">{t("explore.title")}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t("explore.subtitle")}</p>
       </div>
 
       {loading ? (
@@ -49,7 +50,9 @@ export default function ExplorePage() {
                     {acc.label}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    {(acc.subscriberCount || 0).toLocaleString("fr-CA")} abonnés
+                    {t("explore.subscribersCount", {
+                      n: (acc.subscriberCount || 0).toLocaleString(locale),
+                    })}
                   </p>
                 </div>
                 <span className="text-gray-300 group-hover:text-chanv-terre transition-colors text-xl">

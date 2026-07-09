@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useT, useLocale } from "@/lib/i18n";
 import type { Snapshot } from "@/lib/types";
 
 export default function SnapshotsPage() {
@@ -11,6 +12,8 @@ export default function SnapshotsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Snapshot | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const t = useT();
+  const locale = useLocale();
 
   const load = () => {
     setLoading(true);
@@ -52,41 +55,37 @@ export default function SnapshotsPage() {
     <main className="py-6">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">📦 Copies / Snapshots</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Copies horodatées des bases d&apos;abonnés MailerLite
-          </p>
+          <h1 className="text-2xl font-bold">{t("snapshots.title")}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t("snapshots.subtitle")}</p>
         </div>
         <Link href="/snapshots/new" className="btn-primary text-sm">
-          + Nouvelle copie
+          {t("snapshots.new")}
         </Link>
       </div>
 
       <div className="card overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-400 animate-pulse">
-            Chargement…
+            {t("snapshots.loading")}
           </div>
         ) : snapshots.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
-            <p className="text-lg mb-2">Aucun snapshot</p>
-            <p className="text-sm">
-              Créez votre première copie pour sauvegarder la base d&apos;abonnés.
-            </p>
+            <p className="text-lg mb-2">{t("snapshots.empty")}</p>
+            <p className="text-sm">{t("snapshots.emptyHint")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-chanv-fibre text-left bg-chanv-fibre/30">
-                  <th className="py-3 px-4 font-semibold" scope="col">Label</th>
-                  <th className="py-3 px-4 font-semibold" scope="col">Compte</th>
-                  <th className="py-3 px-4 font-semibold" scope="col">Statut</th>
+                  <th className="py-3 px-4 font-semibold" scope="col">{t("snapshots.colLabel")}</th>
+                  <th className="py-3 px-4 font-semibold" scope="col">{t("snapshots.colAccount")}</th>
+                  <th className="py-3 px-4 font-semibold" scope="col">{t("snapshots.colStatus")}</th>
                   <th className="py-3 px-4 font-semibold hidden md:table-cell" scope="col">
-                    Abonnés
+                    {t("snapshots.colSubscribers")}
                   </th>
                   <th className="py-3 px-4 font-semibold hidden md:table-cell" scope="col">
-                    Date
+                    {t("snapshots.colDate")}
                   </th>
                   <th className="py-3 px-4" scope="col" />
                 </tr>
@@ -112,16 +111,16 @@ export default function SnapshotsPage() {
                       <StatusBadge status={snap.status} />
                       {snap.status === "running" && (
                         <span className="text-xs text-gray-400 ml-2">
-                          {snap.fetchedSubscribers.toLocaleString("fr-CA")} /{" "}
-                          {snap.totalSubscribers.toLocaleString("fr-CA")}
+                          {snap.fetchedSubscribers.toLocaleString(locale)} /{" "}
+                          {snap.totalSubscribers.toLocaleString(locale)}
                         </span>
                       )}
                     </td>
                     <td className="py-3 px-4 hidden md:table-cell text-gray-500">
-                      {snap.fetchedSubscribers.toLocaleString("fr-CA")}
+                      {snap.fetchedSubscribers.toLocaleString(locale)}
                     </td>
                     <td className="py-3 px-4 hidden md:table-cell text-gray-500 text-xs">
-                      {new Date(snap.createdAt).toLocaleDateString("fr-CA", {
+                      {new Date(snap.createdAt).toLocaleDateString(locale, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
@@ -136,7 +135,7 @@ export default function SnapshotsPage() {
                             href={`/snapshots/${snap.id}`}
                             className="btn-ghost text-xs"
                           >
-                            Voir
+                            {t("snapshots.view")}
                           </Link>
                         )}
                         <button
@@ -157,9 +156,9 @@ export default function SnapshotsPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Supprimer ce snapshot ?"
-        message={`La copie « ${deleteTarget?.label} » et tous ses abonnés seront supprimés définitivement.`}
-        confirmLabel="Supprimer"
+        title={t("snapshots.deleteTitle")}
+        message={t("snapshots.deleteMessage", { label: deleteTarget?.label || "" })}
+        confirmLabel={t("snapshots.deleteConfirm")}
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

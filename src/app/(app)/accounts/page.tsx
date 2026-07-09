@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useT, useLocale } from "@/lib/i18n";
 import type { MailerLiteAccount } from "@/lib/types";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<MailerLiteAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useT();
 
   useEffect(() => {
     fetch("/api/accounts")
@@ -22,10 +24,8 @@ export default function AccountsPage() {
     <main className="py-6">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">📊 Comptes MailerLite</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Comptes configurés via les variables d&apos;environnement
-          </p>
+          <h1 className="text-2xl font-bold">{t("accounts.title")}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t("accounts.subtitle")}</p>
         </div>
       </div>
 
@@ -41,10 +41,9 @@ export default function AccountsPage() {
         </div>
       ) : accounts.length === 0 ? (
         <div className="card p-12 text-center text-gray-400">
-          <p className="text-lg mb-2">Aucun compte configuré</p>
+          <p className="text-lg mb-2">{t("accounts.empty")}</p>
           <p className="text-sm">
-            Ajoutez les variables <code>MAILERLITE_API_KEY</code> et/ou{" "}
-            <code>MAILERLITE_CHANV_API_KEY</code> aux env vars.
+            {t("accounts.emptyHint", { v1: "MAILERLITE_API_KEY", v2: "MAILERLITE_CHANV_API_KEY" })}
           </p>
         </div>
       ) : (
@@ -59,6 +58,8 @@ export default function AccountsPage() {
 }
 
 function AccountCard({ account }: { account: MailerLiteAccount }) {
+  const t = useT();
+  const locale = useLocale();
   const brandEmoji =
     account.id === "chanv" ? "🌿" : account.id === "mdh" ? "🏠" : account.id === "bleuh" ? "🔵" : "📧";
 
@@ -73,16 +74,16 @@ function AccountCard({ account }: { account: MailerLiteAccount }) {
           <h2 className="inline text-lg font-bold">{account.label}</h2>
         </div>
         <span className="badge-neutral text-[10px]">
-          Clé: {account.apiKeyMasked}
+          {t("accounts.keyLabel", { key: account.apiKeyMasked })}
         </span>
       </div>
 
       <div className="mb-6">
         <div className="text-3xl font-bold tracking-tight">
-          {(account.subscriberCount || 0).toLocaleString("fr-CA")}
+          {(account.subscriberCount || 0).toLocaleString(locale)}
         </div>
         <div className="text-xs text-gray-500 uppercase tracking-widest mt-1">
-          Abonnés
+          {t("accounts.subscribers")}
         </div>
       </div>
 
@@ -91,13 +92,13 @@ function AccountCard({ account }: { account: MailerLiteAccount }) {
           href={`/explore/${account.id}`}
           className="btn-primary text-xs flex-1 text-center"
         >
-          🔍 Explorer
+          {t("accounts.explore")}
         </Link>
         <Link
           href={`/snapshots/new?accountId=${account.id}`}
           className="btn-secondary text-xs flex-1 text-center"
         >
-          📦 Créer une copie
+          {t("accounts.createSnapshot")}
         </Link>
       </div>
     </div>

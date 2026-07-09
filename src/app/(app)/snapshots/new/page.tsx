@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useT, useLocale } from "@/lib/i18n";
 import type { MailerLiteAccount, MLGroup } from "@/lib/types";
 
 type StreamState =
@@ -24,6 +25,8 @@ function formatDuration(seconds: number): string {
 export default function NewSnapshotPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useT();
+  const locale = useLocale();
   const preselectedAccount = searchParams.get("accountId") || "";
 
   const [accounts, setAccounts] = useState<MailerLiteAccount[]>([]);
@@ -69,7 +72,7 @@ export default function NewSnapshotPage() {
 
     setStream({
       phase: "running",
-      message: "Démarrage…",
+      message: t("newSnapshot.starting"),
       fetched: 0,
       total: 0,
       percent: 0,
@@ -91,7 +94,7 @@ export default function NewSnapshotPage() {
 
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(data.error || t("newSnapshot.httpError", { status: res.status }));
       }
 
       // Read SSE stream
@@ -122,7 +125,7 @@ export default function NewSnapshotPage() {
       }
     } catch (err: any) {
       if (err.name !== "AbortError") {
-        setStream({ phase: "error", message: err.message || "Erreur inconnue" });
+        setStream({ phase: "error", message: err.message || t("newSnapshot.unknownError") });
       }
     }
   };
@@ -140,7 +143,10 @@ export default function NewSnapshotPage() {
       case "progress":
         setStream({
           phase: "running",
-          message: `${data.fetched.toLocaleString("fr-CA")} / ${data.total.toLocaleString("fr-CA")} abonnés`,
+          message: t("newSnapshot.progress", {
+            fetched: data.fetched.toLocaleString(locale),
+            total: data.total.toLocaleString(locale),
+          }),
           fetched: data.fetched,
           total: data.total,
           percent: data.percent,
@@ -189,15 +195,13 @@ export default function NewSnapshotPage() {
 
   return (
     <main className="py-6 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-2">📦 Nouvelle copie</h1>
-      <p className="text-sm text-gray-500 mb-8">
-        Sauvegarder la base d&apos;abonnés MailerLite dans le cloud
-      </p>
+      <h1 className="text-2xl font-bold mb-2">{t("newSnapshot.title")}</h1>
+      <p className="text-sm text-gray-500 mb-8">{t("newSnapshot.subtitle")}</p>
 
       <form onSubmit={handleSubmit} className="section-card p-8 space-y-6">
         {/* Compte */}
         <div>
-          <label className="label label-required">Compte MailerLite</label>
+          <label className="label label-required">{t("newSnapshot.account")}</label>
           <select
             className="input"
             value={accountId}
@@ -209,10 +213,13 @@ export default function NewSnapshotPage() {
             required
             disabled={isProcessing}
           >
-            <option value="">— Sélectionner —</option>
+            <option value="">{t("newSnapshot.select")}</option>
             {accounts.map((acc) => (
               <option key={acc.id} value={acc.id}>
-                {acc.label} ({(acc.subscriberCount || 0).toLocaleString("fr-CA")} abonnés)
+                {t("newSnapshot.accountOption", {
+                  label: acc.label,
+                  n: (acc.subscriberCount || 0).toLocaleString(locale),
+                })}
               </option>
             ))}
           </select>
@@ -220,7 +227,7 @@ export default function NewSnapshotPage() {
 
         {/* Scope */}
         <div>
-          <label className="label">Portée</label>
+          <label className="label">{t("newSnapshot.scope")}</label>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -231,7 +238,7 @@ export default function NewSnapshotPage() {
                 onChange={() => setScope("all")}
                 disabled={isProcessing}
               />
-              <span className="text-sm">Tous les abonnés</span>
+              <span className="text-sm">{t("newSnapshot.scopeAll")}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -242,7 +249,7 @@ export default function NewSnapshotPage() {
                 onChange={() => setScope("group")}
                 disabled={isProcessing}
               />
-              <span className="text-sm">Un groupe spécifique</span>
+              <span className="text-sm">{t("newSnapshot.scopeGroup")}</span>
             </label>
           </div>
         </div>
@@ -250,7 +257,7 @@ export default function NewSnapshotPage() {
         {/* Groupe */}
         {scope === "group" && (
           <div>
-            <label className="label label-required">Groupe</label>
+            <label className="label label-required">{t("newSnapshot.group")}</label>
             <select
               className="input"
               value={groupId}
@@ -259,11 +266,14 @@ export default function NewSnapshotPage() {
               disabled={loadingGroups || isProcessing}
             >
               <option value="">
-                {loadingGroups ? "Chargement…" : "— Sélectionner —"}
+                {loadingGroups ? t("newSnapshot.groupLoading") : t("newSnapshot.select")}
               </option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.name} ({g.activeCount.toLocaleString("fr-CA")} actifs)
+                  {t("newSnapshot.groupOption", {
+                    name: g.name,
+                    n: g.activeCount.toLocaleString(locale),
+                  })}
                 </option>
               ))}
             </select>
@@ -272,11 +282,11 @@ export default function NewSnapshotPage() {
 
         {/* Label */}
         <div>
-          <label className="label">Label (optionnel)</label>
+          <label className="label">{t("newSnapshot.label")}</label>
           <input
             type="text"
             className="input"
-            placeholder="Ex : Copie complète Chanv — Juin 2026"
+            placeholder={t("newSnapshot.labelPlaceholder")}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             maxLength={120}
@@ -312,9 +322,9 @@ export default function NewSnapshotPage() {
                 {/* ETA + Elapsed */}
                 {stream.phase === "running" && stream.fetched > 0 && (
                   <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>⏱ Écoulé : {getElapsed()}</span>
+                    <span>{t("newSnapshot.elapsed", { t: getElapsed() || "" })}</span>
                     {getETA() && (
-                      <span>⏳ Restant : ~{getETA()}</span>
+                      <span>{t("newSnapshot.remaining", { t: getETA() || "" })}</span>
                     )}
                   </div>
                 )}
@@ -325,14 +335,14 @@ export default function NewSnapshotPage() {
             {stream.phase === "completed" && (
               <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-center space-y-3">
                 <div className="text-green-700 font-semibold">
-                  ✅ Copie terminée — {stream.total.toLocaleString("fr-CA")} abonnés sauvegardés
+                  {t("newSnapshot.completed", { n: stream.total.toLocaleString(locale) })}
                 </div>
                 <button
                   type="button"
                   className="btn-primary"
                   onClick={() => router.push(`/snapshots/${stream.snapshotId}`)}
                 >
-                  Voir la copie →
+                  {t("newSnapshot.viewCopy")}
                 </button>
               </div>
             )}
@@ -354,7 +364,7 @@ export default function NewSnapshotPage() {
               className="btn-primary flex-1"
               disabled={isProcessing || !accountId}
             >
-              {isProcessing ? "⏳ Copie en cours…" : "🚀 Lancer la copie"}
+              {isProcessing ? t("newSnapshot.submitting") : t("newSnapshot.submit")}
             </button>
           )}
           {!isProcessing && (
@@ -363,7 +373,7 @@ export default function NewSnapshotPage() {
               className="btn-ghost"
               onClick={() => router.push("/snapshots")}
             >
-              {stream.phase === "completed" ? "Retour" : "Annuler"}
+              {stream.phase === "completed" ? t("newSnapshot.backBtn") : t("newSnapshot.cancel")}
             </button>
           )}
         </div>

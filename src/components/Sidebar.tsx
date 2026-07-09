@@ -2,9 +2,7 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./AuthProvider";
-import { ROLE_LABELS } from "@/lib/types";
-
-const HUB_URL = process.env.NEXT_PUBLIC_HUB_URL || "https://chanv-apps-hub-271227085398.northamerica-northeast1.run.app";
+import { useT } from "@/lib/i18n";
 
 /**
  * Sidebar component — delegates to the GANDALF widget (gandalf-widget.js).
@@ -14,19 +12,18 @@ const HUB_URL = process.env.NEXT_PUBLIC_HUB_URL || "https://chanv-apps-hub-27122
  */
 export function Sidebar() {
   const { session, firebaseUser, signOut } = useAuth();
-
-  const isAdmin = session?.role === "admin" || session?.role === "superadmin";
+  const t = useT();
 
   // Build app-specific links for the widget
   const getLinks = useCallback(() => {
     const links: Array<{ label: string; icon: string; href: string; mobileOnly?: boolean }> = [
-      { label: "Tableau de bord", icon: "🚀", href: "/" },
-      { label: "Comptes ML", icon: "🔑", href: "/accounts" },
-      { label: "Copies / Snapshots", icon: "📦", href: "/snapshots" },
-      { label: "Explorer", icon: "🔍", href: "/explore" },
+      { label: t("nav.dashboard"), icon: "🚀", href: "/" },
+      { label: t("nav.accounts"), icon: "🔑", href: "/accounts" },
+      { label: t("nav.snapshots"), icon: "📦", href: "/snapshots" },
+      { label: t("nav.explore"), icon: "🔍", href: "/explore" },
     ];
     return links;
-  }, [isAdmin]);
+  }, [t]);
 
   // Initialize GANDALF widget once session is ready
   const initDone = useRef(false);
@@ -67,7 +64,7 @@ export function Sidebar() {
           name: session.displayName || session.email,
           email: session.email,
           photo: session.photoURL || "",
-          role: ROLE_LABELS[session.role] || session.role,
+          role: t(`role.${session.role}`),
         },
         token,
         lang: localStorage.getItem("gandalf_lang") || "fr",
@@ -99,7 +96,7 @@ export function Sidebar() {
       id="avatar-burger-btn"
       onClick={() => (window as any).GandalfWidget?.toggle()}
       className="avatar-burger-btn relative"
-      title="Menu"
+      title={t("nav.menu")}
     >
       <div className="avatar-burger-inner">
         {session.photoURL && (

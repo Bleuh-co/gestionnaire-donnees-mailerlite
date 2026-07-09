@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   open: boolean;
@@ -18,10 +19,11 @@ export function ConfirmDialog({
   message,
   onConfirm,
   onCancel,
-  confirmLabel = "Confirmer",
+  confirmLabel,
   loading = false,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const t = useT();
 
   useEffect(() => {
     if (open) {
@@ -48,14 +50,14 @@ export function ConfirmDialog({
             onClick={onCancel}
             disabled={loading}
           >
-            Annuler
+            {t("dialog.cancel")}
           </button>
           <button
             className="btn-primary bg-red-500 text-white"
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? "…" : confirmLabel}
+            {loading ? "…" : confirmLabel || t("dialog.confirm")}
           </button>
         </div>
       </div>

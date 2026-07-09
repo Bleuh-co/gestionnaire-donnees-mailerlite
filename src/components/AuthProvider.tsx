@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -17,6 +18,7 @@ import {
 } from "firebase/auth";
 import { firebaseAuth, googleProvider } from "@/lib/firebase-client";
 import { isEmailDomainAllowed, allowedDomains } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { Role } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -43,6 +45,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [session, setSession] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const t = useT();
+  // Ref pour utiliser t() dans l'effet d'auth sans re-souscrire au listener
+  // Firebase à chaque changement de langue.
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const refreshSession = useCallback(async () => {
     try {
@@ -69,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (!isEmailDomainAllowed(u.email)) {
         await fbSignOut(auth);
-        toast.error(`Domaine non autorisé. Domaines acceptés: ${allowedDomains().join(", ")}`);
+        toast.error(tRef.current("auth.domainRefused", { domains: allowedDomains().join(", ") }));
         setSession(null);
         setLoading(false);
         return;
@@ -90,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           toast.error(
             err.error
               ? `${err.error}${err.detail ? ` (${err.detail})` : ""}`
-              : `Session refusée (${res.status})`
+              : tRef.current("auth.sessionRefused", { status: res.status })
           );
           await fbSignOut(auth);
           setSession(null);
@@ -111,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithPopup(auth, googleProvider());
     } catch (e: any) {
       if (e?.code !== "auth/popup-closed-by-user") {
-        toast.error(e?.message || "Échec de la connexion");
+        toast.error(e?.message || tRef.current("auth.signInFailed"));
       }
     }
   }, []);
