@@ -36,7 +36,7 @@ steps:
           --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=271227085398 \
           --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=1:271227085398:web:dd67b650261fbb28d551f7 \
           --build-arg NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=chanv.com,bleuh.co,lafeuilleverte.ca,maisondherbes.com \
-          --build-arg NEXT_PUBLIC_HUB_URL=https://gandalf.chanv.com \
+          --build-arg NEXT_PUBLIC_HUB_URL=https://chanv-apps-hub-271227085398.northamerica-northeast1.run.app \
           -t "${_IMAGE}:${_TAG}" .
         rm -f /workspace/gh_token
 
@@ -59,7 +59,7 @@ steps:
       - --port=8080
       - --memory=1Gi
       - --cpu=1
-      - --update-env-vars=^;^HUB_URL=https://gandalf.chanv.com;APP_PUBLIC_URL=https://gestionnaire-donnees-mailerlite-271227085398.us-east1.run.app
+      - --update-env-vars=^;^APP_PUBLIC_URL=https://gestionnaire-donnees-mailerlite-271227085398.us-east1.run.app
       - --update-secrets=FIREBASE_SERVICE_ACCOUNT_JSON=FIREBASE_SERVICE_ACCOUNT_JSON:latest,MAILERLITE_API_KEY=MAILERLITE_API_KEY:latest,MAILERLITE_CHANV_API_KEY=MAILERLITE_CHANV_API_KEY:latest,MAILERLITE_BLEUH_API_KEY=MAILERLITE_BLEUH_API_KEY:latest
 
 images:
