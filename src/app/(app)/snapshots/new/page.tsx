@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
+import { canManageSnapshots } from "@/lib/utils";
 import { useT, useLocale } from "@/lib/i18n";
 import type { MailerLiteAccount, MLGroup } from "@/lib/types";
 
@@ -25,6 +27,8 @@ function formatDuration(seconds: number): string {
 export default function NewSnapshotPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { session } = useAuth();
+  const canManage = canManageSnapshots(session?.role);
   const t = useT();
   const locale = useLocale();
   const preselectedAccount = searchParams.get("accountId") || "";
@@ -192,6 +196,24 @@ export default function NewSnapshotPage() {
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, [isProcessing]);
+
+  // Garde LECTURE SEULE : un Consulter (ou moins) ne peut pas lancer de copie.
+  // Miroir client de requireGestionnaire — /api/snapshots/stream 403 de toute
+  // façon, mais on ne doit jamais exposer le formulaire de copie à un lecteur.
+  if (session && !canManage) {
+    return (
+      <main className="py-6 max-w-2xl">
+        <div className="section-card p-10 text-center">
+          <div className="text-4xl mb-4">🔒</div>
+          <h1 className="text-2xl font-bold mb-3">{t("forbidden.gestionnaireTitle")}</h1>
+          <p className="text-sm text-gray-500 mb-6">{t("forbidden.gestionnaireMessage")}</p>
+          <button className="btn-primary" onClick={() => router.push("/snapshots")}>
+            {t("forbidden.backToSnapshots")}
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="py-6 max-w-2xl">

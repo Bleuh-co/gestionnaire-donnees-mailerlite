@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
+import { canManageSnapshots } from "@/lib/utils";
 import { useT, useLocale } from "@/lib/i18n";
 import type { MailerLiteAccount } from "@/lib/types";
 
@@ -58,6 +60,8 @@ export default function AccountsPage() {
 }
 
 function AccountCard({ account }: { account: MailerLiteAccount }) {
+  const { session } = useAuth();
+  const canManage = canManageSnapshots(session?.role);
   const t = useT();
   const locale = useLocale();
   const brandEmoji =
@@ -94,12 +98,14 @@ function AccountCard({ account }: { account: MailerLiteAccount }) {
         >
           {t("accounts.explore")}
         </Link>
-        <Link
-          href={`/snapshots/new?accountId=${account.id}`}
-          className="btn-secondary text-xs flex-1 text-center"
-        >
-          {t("accounts.createSnapshot")}
-        </Link>
+        {canManage && (
+          <Link
+            href={`/snapshots/new?accountId=${account.id}`}
+            className="btn-secondary text-xs flex-1 text-center"
+          >
+            {t("accounts.createSnapshot")}
+          </Link>
+        )}
       </div>
     </div>
   );

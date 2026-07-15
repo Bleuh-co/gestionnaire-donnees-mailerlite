@@ -56,6 +56,9 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     "blocked.title": "Accès non autorisé",
     "blocked.message": "Ce compte n'a pas accès à Importation MailerLite. Contactez un administrateur pour obtenir un rôle, ou essayez un autre compte.",
     "blocked.retry": "Essayer un autre compte",
+    "forbidden.gestionnaireTitle": "Accès Gestionnaire requis",
+    "forbidden.gestionnaireMessage": "Votre accès est en lecture seule. Seuls les Gestionnaires peuvent lancer une nouvelle copie.",
+    "forbidden.backToSnapshots": "Retour aux copies",
 
     // Comptes
     "accounts.title": "📊 Comptes MailerLite",
@@ -199,6 +202,9 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     "blocked.title": "Access denied",
     "blocked.message": "This account does not have access to Importation MailerLite. Contact an administrator to be granted a role, or try another account.",
     "blocked.retry": "Try another account",
+    "forbidden.gestionnaireTitle": "Manager access required",
+    "forbidden.gestionnaireMessage": "Your access is read-only. Only Managers can start a new copy.",
+    "forbidden.backToSnapshots": "Back to copies",
 
     "accounts.title": "📊 MailerLite Accounts",
     "accounts.subtitle": "Accounts configured via environment variables",
@@ -333,6 +339,9 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     "blocked.title": "Acceso no autorizado",
     "blocked.message": "Esta cuenta no tiene acceso a Importación MailerLite. Contacta a un administrador para obtener un rol, o prueba con otra cuenta.",
     "blocked.retry": "Probar con otra cuenta",
+    "forbidden.gestionnaireTitle": "Acceso de Gestor requerido",
+    "forbidden.gestionnaireMessage": "Tu acceso es de solo lectura. Solo los Gestores pueden iniciar una nueva copia.",
+    "forbidden.backToSnapshots": "Volver a las copias",
 
     "accounts.title": "📊 Cuentas MailerLite",
     "accounts.subtitle": "Cuentas configuradas mediante variables de entorno",

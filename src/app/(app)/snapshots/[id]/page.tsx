@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SubscriberTable } from "@/components/SubscriberTable";
+import { useAuth } from "@/components/AuthProvider";
+import { canManageSnapshots } from "@/lib/utils";
 import { useT, useLocale } from "@/lib/i18n";
 import type { Snapshot } from "@/lib/types";
 
@@ -16,6 +18,8 @@ export default function SnapshotDetailPage({
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { session } = useAuth();
+  const canManage = canManageSnapshots(session?.role);
   const t = useT();
   const locale = useLocale();
 
@@ -161,8 +165,9 @@ export default function SnapshotDetailPage({
         </div>
       )}
 
-      {/* Export buttons */}
-      {snapshot.status === "completed" && (
+      {/* Export buttons — Gestionnaire+ seulement (export = exfiltration PII).
+          Consulter garde la consultation en lecture seule du tableau ci-dessous. */}
+      {snapshot.status === "completed" && canManage && (
         <div className="flex gap-3 mb-8">
           <a
             href={`/api/snapshots/${id}/export?format=csv`}

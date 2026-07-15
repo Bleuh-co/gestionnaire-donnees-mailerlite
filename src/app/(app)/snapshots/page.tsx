@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useAuth } from "@/components/AuthProvider";
+import { canManageSnapshots } from "@/lib/utils";
 import { useT, useLocale } from "@/lib/i18n";
 import type { Snapshot } from "@/lib/types";
 
@@ -12,6 +14,8 @@ export default function SnapshotsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Snapshot | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { session } = useAuth();
+  const canManage = canManageSnapshots(session?.role);
   const t = useT();
   const locale = useLocale();
 
@@ -58,9 +62,11 @@ export default function SnapshotsPage() {
           <h1 className="text-2xl font-bold">{t("snapshots.title")}</h1>
           <p className="text-sm text-gray-500 mt-1">{t("snapshots.subtitle")}</p>
         </div>
-        <Link href="/snapshots/new" className="btn-primary text-sm">
-          {t("snapshots.new")}
-        </Link>
+        {canManage && (
+          <Link href="/snapshots/new" className="btn-primary text-sm">
+            {t("snapshots.new")}
+          </Link>
+        )}
       </div>
 
       <div className="card overflow-hidden">
@@ -138,12 +144,14 @@ export default function SnapshotsPage() {
                             {t("snapshots.view")}
                           </Link>
                         )}
-                        <button
-                          className="btn-ghost text-xs text-red-500 hover:text-red-700"
-                          onClick={() => setDeleteTarget(snap)}
-                        >
-                          🗑
-                        </button>
+                        {canManage && (
+                          <button
+                            className="btn-ghost text-xs text-red-500 hover:text-red-700"
+                            onClick={() => setDeleteTarget(snap)}
+                          >
+                            🗑
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
