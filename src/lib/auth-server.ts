@@ -184,7 +184,8 @@ export async function resolveRoleVerbose(email: string): Promise<RoleResolution>
  *   1. Bootstrap admins → superadmin
  *   2. user_app_roles (clé `${email}__${appId}`) → mapping
  *   3. users.role legacy global → mapping (fallback)
- *   4. Default → membre
+ *   4. Default → blocked (deny-by-default recette : sans rôle explicite,
+ *      refusé à l'auth gate — voir le commentaire PII à resolveRoleVerbose).
  */
 export async function resolveRole(email: string): Promise<Role> {
   const r = await resolveRoleVerbose(email);
