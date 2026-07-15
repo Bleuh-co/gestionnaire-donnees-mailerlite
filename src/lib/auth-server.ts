@@ -86,7 +86,10 @@ async function resolveGestiDonneMaileAppId(
   const appsSnap = await db.collection("apps").get();
   const match = appsSnap.docs.find((d) => {
     const name = (d.data().name || "").toLowerCase().replace(/\s+/g, "");
-    return name.includes("gestionnairedonneesmailerlite") || (name.includes("duplication") && name.includes("taches"));
+    // Doc registre nommé « Importation MailerLite » → on matche le jeton stable
+    // « mailerlite » (fallback ; l'env GESTIDONNEMAILE_APP_ID prime). Retiré le
+    // reliquat copié-collé « duplication/taches ».
+    return name.includes("mailerlite");
   });
   return { appId: match?.id || "", appName: (match?.data().name as string) || null };
 }

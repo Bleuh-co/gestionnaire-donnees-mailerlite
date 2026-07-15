@@ -53,6 +53,9 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     "auth.domainRefused": "Domaine non autorisé. Domaines acceptés: {domains}",
     "auth.sessionRefused": "Session refusée ({status})",
     "auth.signInFailed": "Échec de la connexion",
+    "blocked.title": "Accès non autorisé",
+    "blocked.message": "Ce compte n'a pas accès à Importation MailerLite. Contactez un administrateur pour obtenir un rôle, ou essayez un autre compte.",
+    "blocked.retry": "Essayer un autre compte",
 
     // Comptes
     "accounts.title": "📊 Comptes MailerLite",
@@ -193,6 +196,9 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     "auth.domainRefused": "Domain not allowed. Accepted domains: {domains}",
     "auth.sessionRefused": "Session refused ({status})",
     "auth.signInFailed": "Sign-in failed",
+    "blocked.title": "Access denied",
+    "blocked.message": "This account does not have access to Importation MailerLite. Contact an administrator to be granted a role, or try another account.",
+    "blocked.retry": "Try another account",
 
     "accounts.title": "📊 MailerLite Accounts",
     "accounts.subtitle": "Accounts configured via environment variables",
@@ -324,6 +330,9 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     "auth.domainRefused": "Dominio no autorizado. Dominios aceptados: {domains}",
     "auth.sessionRefused": "Sesión rechazada ({status})",
     "auth.signInFailed": "Error al iniciar sesión",
+    "blocked.title": "Acceso no autorizado",
+    "blocked.message": "Esta cuenta no tiene acceso a Importación MailerLite. Contacta a un administrador para obtener un rol, o prueba con otra cuenta.",
+    "blocked.retry": "Probar con otra cuenta",
 
     "accounts.title": "📊 Cuentas MailerLite",
     "accounts.subtitle": "Cuentas configuradas mediante variables de entorno",

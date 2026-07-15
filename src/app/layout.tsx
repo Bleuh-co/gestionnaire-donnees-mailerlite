@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { GandalfProvider } from "@bleuh-co/gandalf-sdk-next/client";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { StandaloneWidgets } from "@/components/StandaloneWidgets";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -60,9 +61,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             return null;
           };
         `}</Script>
-        <Script src={`${HUB_URL}/widgets/chatbot.js`} data-hub={HUB_URL} strategy="lazyOnload" />
-        <Script src={`${HUB_URL}/widgets/feedback.js`} data-hub={HUB_URL} strategy="lazyOnload" />
-        <Script src={`${HUB_URL}/js/gandalf-widget.js`} data-hub={HUB_URL} strategy="lazyOnload" />
+        {/* Widgets flottants du hub — STANDALONE seulement (vrai framing). AVANT :
+            <Script> inconditionnels → doublon dans l'iframe du hub. */}
+        <StandaloneWidgets hubUrl={HUB_URL} scripts={["/widgets/chatbot.js", "/widgets/feedback.js", "/js/gandalf-widget.js"]} />
         {/* Service worker — rend la PWA installable */}
         <Script id="register-sw" strategy="afterInteractive">{`
           if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {

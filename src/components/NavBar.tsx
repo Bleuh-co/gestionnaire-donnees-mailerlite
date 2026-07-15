@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -17,6 +18,13 @@ export function NavBar() {
   const pathname = usePathname();
   const t = useT();
 
+  // Vrai framing (window.self !== window.top) : le flag `embedded` du SDK vient
+  // du cookie gandalf_embed collant → chrome d'embed sans burger en standalone.
+  const [framed, setFramed] = useState(embedded);
+  useEffect(() => {
+    setFramed(window.self !== window.top);
+  }, []);
+
   if (!session) return null;
 
   // « masqué ≠ perdu » : la même liste de liens sert le header autonome ET la
@@ -30,12 +38,12 @@ export function NavBar() {
   const isActive = (href: string) =>
     pathname === href || pathname?.startsWith(href + "/");
 
-  if (embedded) {
+  if (framed) {
     // Contrat d'embed — nav interne, modèle xero_photo_achat / Gestion-Parc-It :
     // barre claire sticky sur fond parchemin, pastilles blanches arrondies,
     // pastille active or. Le hub fournit logo/titre/profil.
     return (
-      <nav className="sticky top-0 z-40 flex flex-wrap items-center gap-1.5 bg-[#F4EFE3] px-4 pb-1 pt-3">
+      <nav id="gandalf-embed-nav" className="sticky top-0 z-40 flex flex-wrap items-center gap-1.5 bg-[#F4EFE3] px-4 pb-1 pt-3">
         {links.map((l) => (
           <Link
             key={l.href}
