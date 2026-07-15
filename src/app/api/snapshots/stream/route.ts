@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireSession } from "@/lib/auth-server";
+import { requireGestionnaire } from "@/lib/auth-server";
 import { adminDb } from "@/lib/firebase-admin";
 import { getClientById } from "@/lib/mailerlite-client";
 import { saveSubscribersToGCS } from "@/lib/gcs-storage";
@@ -17,7 +17,16 @@ const COLLECTION = "ml_snapshots";
  * Cloud Run garde le CPU actif tant que la requête est ouverte (pas de surcoût).
  */
 export async function POST(req: NextRequest) {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireGestionnaire();
+  } catch (e: any) {
+    const status = e?.message === "UNAUTHORIZED" ? 401 : 403;
+    return new Response(
+      JSON.stringify({ error: status === 401 ? "Non authentifié" : "Accès Gestionnaire requis" }),
+      { status, headers: { "Content-Type": "application/json" } }
+    );
+  }
   const body = await req.json().catch(() => ({}));
   const { accountId, scope, groupId, label } = body as {
     accountId?: string;

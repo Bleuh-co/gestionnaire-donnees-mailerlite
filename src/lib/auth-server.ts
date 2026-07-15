@@ -37,8 +37,9 @@ function mapStandardRole(grade: string): Role {
     case "Administrateur":
       return "admin";
     case "Gestionnaire":
+      return "gestionnaire";
     case "Consulter":
-      return "membre";
+      return "consulter";
     case "Non visible":
       return "blocked";
     default:
@@ -57,7 +58,8 @@ function mapLegacyToStandard(oldRole: string): string {
     case "Employe":
       return "Consulter";
     default:
-      return "Consulter";
+      // Deny-by-default : un rôle Hub inconnu ne donne PLUS « Consulter ».
+      return "Non visible";
   }
 }
 
@@ -114,7 +116,7 @@ export async function resolveRoleVerbose(email: string): Promise<RoleResolution>
     userAppRoleGrade: null,
     legacyGlobalRole: null,
     source: "default",
-    role: "membre",
+    role: "blocked",
   };
 
   // 1. Bootstrap
@@ -167,8 +169,11 @@ export async function resolveRoleVerbose(email: string): Promise<RoleResolution>
     console.warn("[auth] users lookup failed", e);
   }
 
-  // 4. Default — ouvert au domaine
-  return { ...base, source: "default", role: "membre" };
+  // 4. Deny-by-default (décision recette) : sans rôle explicite (bootstrap,
+  //    user_app_roles, rôle Hub reconnu) l'utilisateur est refusé à l'auth gate.
+  //    AVANT : « membre » ouvert à tout le domaine → n'importe quel employé
+  //    pouvait exfiltrer/supprimer des snapshots d'abonnés (PII).
+  return { ...base, source: "default", role: "blocked" };
 }
 
 /**
@@ -223,6 +228,19 @@ export async function requireSession(): Promise<SessionContext> {
 export async function requireAdmin(): Promise<SessionContext> {
   const s = await requireSession();
   if (s.role !== "admin" && s.role !== "superadmin") throw new Error("FORBIDDEN");
+  return s;
+}
+
+/**
+ * Exige `gestionnaire` ou plus (créer/exporter/supprimer des snapshots).
+ * `consulter` est refusé ici (lecture seule) mais garde l'accès aux routes
+ * de consultation gardées par `requireSession`.
+ */
+export async function requireGestionnaire(): Promise<SessionContext> {
+  const s = await requireSession();
+  if (s.role !== "gestionnaire" && s.role !== "admin" && s.role !== "superadmin") {
+    throw new Error("FORBIDDEN");
+  }
   return s;
 }
 

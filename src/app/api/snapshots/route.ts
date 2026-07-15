@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth-server";
+import { requireSession, requireGestionnaire } from "@/lib/auth-server";
 import { adminDb } from "@/lib/firebase-admin";
 import { getClientById } from "@/lib/mailerlite-client";
 import { saveSubscribersToGCS } from "@/lib/gcs-storage";
@@ -43,8 +43,18 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/snapshots → lance la création d'un snapshot (copie vers GCS)
+// Gestionnaire+ : créer un snapshot = extraction en masse d'abonnés (PII).
 export async function POST(req: NextRequest) {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireGestionnaire();
+  } catch (e: any) {
+    const status = e?.message === "UNAUTHORIZED" ? 401 : 403;
+    return NextResponse.json(
+      { error: status === 401 ? "Non authentifié" : "Accès Gestionnaire requis" },
+      { status }
+    );
+  }
   const body = await req.json().catch(() => ({}));
   const { accountId, scope, groupId, label } = body as {
     accountId?: string;

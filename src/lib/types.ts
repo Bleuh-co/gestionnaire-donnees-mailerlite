@@ -1,14 +1,16 @@
 // Rôle interne Gestionnaire données MailerLite (mappé depuis le rôle standardisé Chanv)
-// - superadmin : accès total
-// - admin      : gestion + voir toutes les tâches
-// - membre     : voir ses propres tâches (rôle Consulter)
-// - blocked    : pas d'accès
-export type Role = "superadmin" | "admin" | "membre" | "blocked";
+// - superadmin   : accès total
+// - admin        : gestion complète
+// - gestionnaire : créer/exporter/supprimer des snapshots (le « reste »)
+// - consulter    : lecture seule des données
+// - blocked      : pas d'accès
+export type Role = "superadmin" | "admin" | "gestionnaire" | "consulter" | "blocked";
 
 export const ROLE_LABELS: Record<Role, string> = {
   superadmin: "Super Administrateur",
   admin: "Administrateur",
-  membre: "Membre",
+  gestionnaire: "Gestionnaire",
+  consulter: "Consulter",
   blocked: "Bloqué",
 };
 

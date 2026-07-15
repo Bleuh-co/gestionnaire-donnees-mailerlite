@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth-server";
+import { requireSession, requireGestionnaire } from "@/lib/auth-server";
 import { adminDb } from "@/lib/firebase-admin";
 import { deleteSnapshotFromGCS } from "@/lib/gcs-storage";
 import type { Snapshot } from "@/lib/types";
@@ -36,7 +36,15 @@ export async function DELETE(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  await requireSession();
+  try {
+    await requireGestionnaire();
+  } catch (e: any) {
+    const status = e?.message === "UNAUTHORIZED" ? 401 : 403;
+    return NextResponse.json(
+      { error: status === 401 ? "Non authentifié" : "Accès Gestionnaire requis" },
+      { status }
+    );
+  }
   const { id } = await ctx.params;
   try {
     const db = adminDb();

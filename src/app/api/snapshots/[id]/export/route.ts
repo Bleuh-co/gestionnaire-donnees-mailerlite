@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth-server";
+import { requireGestionnaire } from "@/lib/auth-server";
 import { adminDb } from "@/lib/firebase-admin";
 import { loadSubscribersFromGCS } from "@/lib/gcs-storage";
 import type { ExportFormat, SubscriberStatus } from "@/lib/types";
@@ -13,7 +13,16 @@ export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  await requireSession();
+  // Gestionnaire+ : l'export est une extraction en masse de PII (emails/champs).
+  try {
+    await requireGestionnaire();
+  } catch (e: any) {
+    const status = e?.message === "UNAUTHORIZED" ? 401 : 403;
+    return NextResponse.json(
+      { error: status === 401 ? "Non authentifié" : "Accès Gestionnaire requis" },
+      { status }
+    );
+  }
   const { id } = await ctx.params;
   const sp = req.nextUrl.searchParams;
   const format = (sp.get("format") || "csv") as ExportFormat;

@@ -38,7 +38,8 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     // Rôles
     "role.superadmin": "Super Administrateur",
     "role.admin": "Administrateur",
-    "role.membre": "Membre",
+    "role.gestionnaire": "Gestionnaire",
+    "role.consulter": "Consulter",
     "role.blocked": "Bloqué",
 
     // Connexion
@@ -179,7 +180,8 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
 
     "role.superadmin": "Super Administrator",
     "role.admin": "Administrator",
-    "role.membre": "Member",
+    "role.gestionnaire": "Manager",
+    "role.consulter": "Viewer",
     "role.blocked": "Blocked",
 
     "login.domains": "Sign-in restricted to domains",
@@ -309,7 +311,8 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
 
     "role.superadmin": "Superadministrador",
     "role.admin": "Administrador",
-    "role.membre": "Miembro",
+    "role.gestionnaire": "Gestor",
+    "role.consulter": "Consulta",
     "role.blocked": "Bloqueado",
 
     "login.domains": "Acceso reservado a los dominios",
