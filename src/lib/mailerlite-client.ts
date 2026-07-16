@@ -401,10 +401,9 @@ export function getConfiguredClients(): IMailerLiteClient[] {
     clients.push(new ClassicV2Client("mdh", "Maison d'Herbes", mdhKey));
   }
 
-  const bleuhKey = process.env.MAILERLITE_BLEUH_API_KEY;
-  if (bleuhKey) {
-    clients.push(new ClassicV2Client("bleuh", "Bleuh", bleuhKey));
-  }
+  // Bleuh migré vers son app dédiée « gestion-site-bleuh » (module Infolettre)
+  // et retiré ici lors de la bascule (2026-07-16). MDH et Chanv suivront quand
+  // leurs apps dédiées absorberont leurs fonctions MailerLite.
 
   const chanvKey = process.env.MAILERLITE_CHANV_API_KEY;
   if (chanvKey) {
