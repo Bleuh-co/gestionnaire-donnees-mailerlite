@@ -1,5 +1,6 @@
 import "server-only";
 import { adminAuth, adminDb } from "./firebase-admin";
+import { isEmailDomainAllowed } from "./utils";
 import type { Role } from "./types";
 
 const SESSION_COOKIE = "__session";
@@ -190,6 +191,23 @@ export async function resolveRoleVerbose(email: string): Promise<RoleResolution>
 export async function resolveRole(email: string): Promise<Role> {
   const r = await resolveRoleVerbose(email);
   return r.role;
+}
+
+// --- Whitelist (utilisateurs invites hors-domaine) ---------------------------
+// Un email hors domaine (gmail, etc.) est autorise au gate SEULEMENT s'il a ete
+// invite via le hub : users/{email}.invited === true. isEmailAllowed = domaine
+// autorise OU whiteliste. Le ROLE decide ensuite (deny-by-default inchange).
+export async function isWhitelisted(email: string | null | undefined): Promise<boolean> {
+  const e = (email || "").toLowerCase().trim();
+  if (!e) return false;
+  try {
+    const doc = await adminDb().collection("users").doc(e).get();
+    return doc.exists && doc.data()?.invited === true;
+  } catch { return false; }
+}
+export async function isEmailAllowed(email: string | null | undefined): Promise<boolean> {
+  if (isEmailDomainAllowed(email)) return true;
+  return isWhitelisted(email);
 }
 
 export async function getSession(): Promise<SessionContext | null> {
